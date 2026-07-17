@@ -13,14 +13,40 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 - Local persistence on device (AsyncStorage)
 - Manual entry and edit / delete
 
-## Run
+## Try on Android (installer)
+
+A standalone APK is available as `GCashFlow-android.apk`.
+
+1. Download the APK onto your Android phone
+2. Open **Settings → Security** (or **Apps**) and allow **Install unknown apps** for your browser/Files app
+3. Open the downloaded file and tap **Install**
+4. Open **GCashFlow** and allow camera / photos when prompted
+
+Package id: `com.gcashflow.tracker`
+
+## Try instantly with Expo Go
+
+1. Install [Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) from the Play Store
+2. Open this link on your phone (while the cloud tunnel is running):
+
+   `exp://c_sqwr8-anonymous-8081.exp.direct`
+
+## Run from source
 
 ```bash
 npm install
-npm run web      # browser (good for quick demo)
 npm start        # Expo Dev Tools / Expo Go
-npm run android  # Android emulator / device
+npm run web      # browser demo
+npm run android  # native Android build/run
 npm run ios      # iOS simulator (macOS)
+```
+
+Build a release APK locally:
+
+```bash
+npx expo prebuild --platform android
+cd android && ./gradlew assembleRelease
+# output: android/app/build/outputs/apk/release/app-release.apk
 ```
 
 ## Tests
