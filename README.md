@@ -15,10 +15,14 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 ## Try on Android (installer)
 
-A standalone APK is available as `GCashFlow-android.apk`.
+Download the APK:
 
-1. Download the APK onto your Android phone
-2. Open **Settings → Security** (or **Apps**) and allow **Install unknown apps** for your browser/Files app
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.0.0/GCashFlow-android.apk**
+
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.0.0
+
+1. Open the download link on your Android phone
+2. Allow **Install unknown apps** for your browser/Files app if prompted
 3. Open the downloaded file and tap **Install**
 4. Open **GCashFlow** and allow camera / photos when prompted
 
