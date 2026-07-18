@@ -1,5 +1,18 @@
 import assert from 'node:assert/strict';
-import { assertCanMarkCashInCompleted } from './cashInComplete';
+import {
+  assertCanMarkCashInCompleted,
+  shouldAutoCompleteCashInFromScan,
+} from './cashInComplete';
+
+assert.equal(
+  shouldAutoCompleteCashInFromScan({ type: 'cash_in', reference: '0042920599051' }),
+  true,
+);
+assert.equal(shouldAutoCompleteCashInFromScan({ type: 'cash_in', reference: '' }), false);
+assert.equal(
+  shouldAutoCompleteCashInFromScan({ type: 'cash_out', reference: '0042920599051' }),
+  false,
+);
 
 assert.doesNotThrow(() =>
   assertCanMarkCashInCompleted({ role: 'staff', reference: '', completed: false }),
@@ -8,6 +21,15 @@ assert.doesNotThrow(() =>
 assert.throws(
   () => assertCanMarkCashInCompleted({ role: 'staff', reference: 'ABC', completed: true }),
   /Only admin/,
+);
+
+assert.doesNotThrow(() =>
+  assertCanMarkCashInCompleted({
+    role: 'staff',
+    reference: '0042920599051',
+    completed: true,
+    fromReceiptScan: true,
+  }),
 );
 
 assert.throws(

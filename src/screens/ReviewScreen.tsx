@@ -10,7 +10,11 @@ import { useTransactions } from '../context/TransactionsContext';
 import type { ScanResult } from './ScanScreen';
 import type { Transaction } from '../types';
 import { colors } from '../theme';
-import { assertCanMarkCashInCompleted } from '../utils/cashInComplete';
+import {
+  assertCanMarkCashInCompleted,
+  isReceiptScanSource,
+  shouldAutoCompleteCashInFromScan,
+} from '../utils/cashInComplete';
 import { calculateCashOutFee, normalizeReference, parseAmountInput } from '../utils/fee';
 import { createId } from '../utils/id';
 
@@ -26,17 +30,23 @@ interface Props {
 
 function mergeScanIntoDraft(base: TransactionDraft, scan: ScanResult): TransactionDraft {
   const fromScan = draftFromScan(scan);
+  const reference = fromScan.reference || base.reference;
   return {
     ...base,
     type: fromScan.type,
     amount: fromScan.amount || base.amount,
     fee: fromScan.fee || base.fee,
-    reference: fromScan.reference || base.reference,
+    reference,
     counterparty: fromScan.counterparty || base.counterparty,
     occurredAt: fromScan.occurredAt || base.occurredAt,
     source: fromScan.source,
     rawText: fromScan.rawText ?? base.rawText,
     imageUri: fromScan.imageUri || base.imageUri,
+    completed:
+      fromScan.type === 'cash_in'
+        ? shouldAutoCompleteCashInFromScan({ type: 'cash_in', reference }) ||
+          Boolean(base.completed)
+        : false,
   };
 }
 
@@ -45,18 +55,19 @@ function draftFromScan(scan: ScanResult): TransactionDraft {
   const amount = scan.parsed.amount != null ? String(scan.parsed.amount) : '';
   const amountNum = scan.parsed.amount ?? 0;
   const autoFee = type === 'cash_out' ? calculateCashOutFee(amountNum) : scan.parsed.fee ?? 0;
+  const reference = scan.parsed.reference ?? '';
 
   return {
     type,
     amount,
     fee: String(autoFee),
-    reference: scan.parsed.reference ?? '',
+    reference,
     counterparty: scan.parsed.counterparty ?? '',
     note: '',
     occurredAt: scan.parsed.occurredAt ?? new Date().toISOString(),
     source: scan.source,
     claimed: false,
-    completed: false,
+    completed: shouldAutoCompleteCashInFromScan({ type, reference }),
     rawText: scan.parsed.rawText,
     imageUri: scan.imageUri || undefined,
   };
@@ -95,7 +106,6 @@ export function ReviewScreen({
       ? {
           ...draftFromScan(scanResult),
           type: lockedType ?? scanResult.parsed.type ?? 'cash_out',
-          completed: false,
         }
       : mode === 'edit' && transaction
         ? scanResult
@@ -103,14 +113,12 @@ export function ReviewScreen({
               ...mergeScanIntoDraft(draftFromTransaction(transaction), scanResult),
               type: lockedType ?? transaction.type,
               claimed: Boolean(transaction.claimed),
-              completed: Boolean(transaction.completed),
             }
           : draftFromTransaction(transaction)
         : mode === 'create' && scanResult
           ? {
               ...draftFromScan(scanResult),
               type: lockedType ?? scanResult.parsed.type ?? 'cash_in',
-              completed: false,
             }
           : emptyDraft(lockedType);
 
@@ -119,15 +127,25 @@ export function ReviewScreen({
     const fee = parseAmountInput(draft.fee || '0');
     const occurredAt = draft.occurredAt || new Date().toISOString();
     const reference = draft.reference.trim();
-    // Staff may add/edit cash in but cannot set completed; keep existing flag on edit.
+    const fromReceiptScan =
+      mode === 'from-scan' ||
+      Boolean(scanResult) ||
+      isReceiptScanSource(draft.source) ||
+      Boolean(draft.rawText && draft.source !== 'manual');
+
+    // Receipt scans auto-complete when a reference was read. Staff can save that
+    // completed flag from a scan; otherwise only admin can toggle completed.
     const completed =
       draft.type !== 'cash_in'
         ? false
-        : isAdmin
-          ? Boolean(draft.completed)
-          : mode === 'edit'
-            ? Boolean(transaction?.completed)
-            : false;
+        : fromReceiptScan &&
+            shouldAutoCompleteCashInFromScan({ type: 'cash_in', reference })
+          ? true
+          : isAdmin
+            ? Boolean(draft.completed)
+            : mode === 'edit'
+              ? Boolean(transaction?.completed)
+              : false;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error('Enter a valid amount greater than zero.');
@@ -137,6 +155,7 @@ export function ReviewScreen({
       role: session?.role,
       reference,
       completed,
+      fromReceiptScan,
     });
 
     if (normalizeReference(reference)) {

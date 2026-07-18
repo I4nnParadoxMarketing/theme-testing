@@ -346,10 +346,26 @@ export function TransactionForm({
               {draft.completed ? 'Completed' : 'Not completed'}
             </Text>
             <Text style={styles.claimedBody}>
-              Enter a reference first, then mark completed.
+              {draft.completed && (draft.source === 'camera' || draft.source === 'upload')
+                ? 'Marked completed from the receipt scan.'
+                : 'Enter a reference first, then mark completed.'}
             </Text>
           </View>
         </Pressable>
+      ) : null}
+
+      {draft.type === 'cash_in' && !canMarkCompleted && draft.completed ? (
+        <View style={[styles.claimedToggle, styles.claimedToggleOn]}>
+          <View style={[styles.checkbox, styles.checkboxOn]}>
+            <Text style={styles.checkboxMark}>✓</Text>
+          </View>
+          <View style={styles.claimedCopy}>
+            <Text style={styles.claimedTitle}>Completed</Text>
+            <Text style={styles.claimedBody}>
+              Marked completed automatically from the receipt scan.
+            </Text>
+          </View>
+        </View>
       ) : null}
 
       <Field label="From / To">
