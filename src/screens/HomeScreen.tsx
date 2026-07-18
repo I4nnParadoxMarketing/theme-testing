@@ -17,7 +17,8 @@ import { colors, radii, spacing } from '../theme';
 import type { Transaction } from '../types';
 
 interface Props {
-  onScan: () => void;
+  onScanCashIn: () => void;
+  onScanCashOut: () => void;
   onManual: () => void;
   onOpenTransaction: (transaction: Transaction) => void;
   onOpenSync: () => void;
@@ -27,13 +28,22 @@ interface Props {
 const useNativeDriver = Platform.OS !== 'web';
 
 export function HomeScreen({
-  onScan,
+  onScanCashIn,
+  onScanCashOut,
   onManual,
   onOpenTransaction,
   onOpenSync,
   onOpenReports,
 }: Props) {
-  const { transactions, summary, ready, setClaimed, syncMeta, syncing } = useTransactions();
+  const {
+    transactions,
+    summary,
+    ready,
+    setClaimed,
+    setCompleted,
+    syncMeta,
+    syncing,
+  } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
 
@@ -59,22 +69,34 @@ export function HomeScreen({
           <BalanceHero summary={summary} />
 
           <View style={styles.actions}>
-            <PrimaryButton label="Scan receipt" onPress={onScan} style={styles.actionFlex} />
             <PrimaryButton
-              label="Add manually"
-              onPress={onManual}
-              variant="secondary"
+              label="Scan Cash In"
+              onPress={onScanCashIn}
+              style={styles.actionFlex}
+            />
+            <PrimaryButton
+              label="Scan Cash Out"
+              onPress={onScanCashOut}
               style={styles.actionFlex}
             />
           </View>
 
           <View style={styles.actions}>
             <PrimaryButton
+              label="Add manually"
+              onPress={onManual}
+              variant="secondary"
+              style={styles.actionFlex}
+            />
+            <PrimaryButton
               label="Reports"
               onPress={onOpenReports}
               variant="secondary"
               style={styles.actionFlex}
             />
+          </View>
+
+          <View style={styles.actions}>
             <PrimaryButton
               label={syncMeta.enabled ? (syncing ? 'Syncing…' : 'Cloud sync') : 'Cloud sync'}
               onPress={onOpenSync}
@@ -95,7 +117,7 @@ export function HomeScreen({
             <Text style={styles.sectionTitle}>Recent activity</Text>
             <Text style={styles.sectionMeta}>
               {ready
-                ? `${summary.count} saved · ${summary.unclaimedCount} unclaimed`
+                ? `${summary.count} saved · ${summary.unclaimedCount} unclaimed · ${summary.incompleteCount} incomplete`
                 : 'Loading…'}
             </Text>
           </View>
@@ -104,10 +126,10 @@ export function HomeScreen({
             <View style={styles.empty}>
               <Text style={styles.emptyTitle}>No cash moves yet</Text>
               <Text style={styles.emptyBody}>
-                Take a photo of a GCash cash in or cash out receipt, or upload one from your gallery.
+                Use Scan Cash In or Scan Cash Out, or add a transaction manually.
               </Text>
-              <Pressable onPress={onScan} style={styles.emptyLinkWrap}>
-                <Text style={styles.emptyLink}>Open scanner</Text>
+              <Pressable onPress={onScanCashOut} style={styles.emptyLinkWrap}>
+                <Text style={styles.emptyLink}>Open Cash Out scanner</Text>
               </Pressable>
             </View>
           ) : (
@@ -120,6 +142,11 @@ export function HomeScreen({
                   onToggleClaimed={(tx) => {
                     if (tx.type === 'cash_out') {
                       void setClaimed(tx.id, !tx.claimed);
+                    }
+                  }}
+                  onToggleCompleted={(tx) => {
+                    if (tx.type === 'cash_in') {
+                      void setCompleted(tx.id, !tx.completed);
                     }
                   }}
                 />

@@ -26,6 +26,7 @@ interface TransactionsContextValue {
   clearAll: () => Promise<void>;
   findByReference: (reference: string, excludeId?: string) => Transaction | undefined;
   setClaimed: (id: string, claimed: boolean) => Promise<void>;
+  setCompleted: (id: string, completed: boolean) => Promise<void>;
   replaceAll: (transactions: Transaction[]) => Promise<void>;
   refreshFromCloud: () => Promise<void>;
   pushToCloud: () => Promise<void>;
@@ -39,6 +40,8 @@ function computeSummary(transactions: Transaction[]): BalanceSummary {
     (acc, item) => {
       if (item.type === 'cash_in') {
         acc.cashIn += item.amount;
+        if (item.completed) acc.completedCount += 1;
+        else acc.incompleteCount += 1;
       } else {
         acc.cashOut += item.amount;
         if (item.claimed) acc.claimedCount += 1;
@@ -57,6 +60,8 @@ function computeSummary(transactions: Transaction[]): BalanceSummary {
       count: 0,
       claimedCount: 0,
       unclaimedCount: 0,
+      completedCount: 0,
+      incompleteCount: 0,
     },
   );
 }
@@ -200,6 +205,19 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     if (meta) setSyncMeta(meta);
   }, [persistLocal, syncPush]);
 
+  const setCompleted = useCallback(async (id: string, completed: boolean) => {
+    const current = await loadTransactions();
+    const next = await persistLocal(
+      current.map((item) =>
+        item.id === id
+          ? { ...item, completed: item.type === 'cash_in' ? completed : false }
+          : item,
+      ),
+    );
+    const meta = await syncPush(next);
+    if (meta) setSyncMeta(meta);
+  }, [persistLocal, syncPush]);
+
   const clearAll = useCallback(async () => {
     const next = await persistLocal([]);
     const meta = await syncPush(next);
@@ -261,6 +279,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       clearAll,
       findByReference,
       setClaimed,
+      setCompleted,
       replaceAll,
       refreshFromCloud,
       pushToCloud,
@@ -277,6 +296,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       clearAll,
       findByReference,
       setClaimed,
+      setCompleted,
       replaceAll,
       refreshFromCloud,
       pushToCloud,

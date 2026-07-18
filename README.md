@@ -7,20 +7,22 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 ## Features
 
 - Cash in / cash out ledger with net balance
+- **Separate scanners** for Cash In and Cash Out
 - Camera / gallery receipt scan with OCR
-- Claimed marker + auto fee rules for cash outs
+- **Completed / Not completed** tags for cash ins
+- Claimed / Unclaimed marker + auto fee rules for cash outs
 - Duplicate Ref No. blocking
 - **Cloud sync** across phones with a shared sync code
-- **Reports**: today, weekly, monthly, yearly, unclaimed, fees — downloadable CSV
+- **Reports**: today, weekly, monthly, yearly, custom date range, unclaimed, incomplete, fees — downloadable CSV
 - Local persistence on device
 
 ## Try on Android (installer)
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.0/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.1/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.0
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.1
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted
@@ -46,17 +48,20 @@ Open **Reports** to view:
 - Weekly (last 7 days)
 - Monthly
 - Yearly
+- Custom date range (From / To)
 - All time
 - Unclaimed cash outs
+- Incomplete cash ins
 - Fees
 
 Tap **Download CSV** and save/share the file (Files, Drive, email, etc.).
 
-## Cash out rules
+## Cash in / cash out tags
 
-- **Claimed** marker on cash outs
+- **Cash in**: Completed / Not completed (tap the tag on the home list to toggle)
+- **Cash out**: Claimed / Unclaimed
 - **Duplicate Ref No.** blocked with an error
-- **Auto fee** (editable): ≤99 → ₱5 · 100–500 → ₱10 · 501–1000 → ₱15 · each full ₱1,000 → ₱15 + same brackets on excess
+- **Auto fee** for cash outs (editable): ≤99 → ₱5 · 100–500 → ₱10 · 501–1000 → ₱15 · each full ₱1,000 → ₱15 + same brackets on excess
 
 ## Run from source
 

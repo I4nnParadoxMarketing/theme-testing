@@ -39,6 +39,7 @@ export async function loadTransactions(): Promise<Transaction[]> {
         ...item,
         fee: typeof item.fee === 'number' ? item.fee : 0,
         claimed: item.type === 'cash_out' ? Boolean(item.claimed) : false,
+        completed: item.type === 'cash_in' ? Boolean(item.completed) : false,
       }));
   } catch (error) {
     console.warn('Failed to load transactions', error);

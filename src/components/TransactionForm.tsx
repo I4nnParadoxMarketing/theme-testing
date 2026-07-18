@@ -23,6 +23,7 @@ export interface TransactionDraft {
   occurredAt: string;
   source: TransactionSource;
   claimed: boolean;
+  completed: boolean;
   rawText?: string;
   imageUri?: string;
 }
@@ -53,6 +54,7 @@ export function draftFromTransaction(transaction: Transaction): TransactionDraft
     occurredAt: transaction.occurredAt,
     source: transaction.source,
     claimed: Boolean(transaction.claimed),
+    completed: Boolean(transaction.completed),
     rawText: transaction.rawText,
     imageUri: transaction.imageUri,
   };
@@ -81,6 +83,7 @@ export function TransactionForm({
       {
         ...initial,
         claimed: initial.type === 'cash_out' ? Boolean(initial.claimed) : false,
+        completed: initial.type === 'cash_in' ? Boolean(initial.completed) : false,
       },
       initial.type === 'cash_out' && (!initial.fee || initial.fee === '0'),
     ),
@@ -113,10 +116,18 @@ export function TransactionForm({
       if (key === 'type') {
         if (value === 'cash_in') {
           feeManualRef.current = false;
-          return { ...next, claimed: false, fee: prev.fee };
+          return {
+            ...next,
+            claimed: false,
+            completed: Boolean(prev.completed),
+            fee: prev.fee,
+          };
         }
         feeManualRef.current = false;
-        return withAutoFee({ ...next, claimed: Boolean(prev.claimed) }, true);
+        return withAutoFee(
+          { ...next, claimed: Boolean(prev.claimed), completed: false },
+          true,
+        );
       }
 
       if (key === 'amount' && next.type === 'cash_out' && !feeManualRef.current) {
@@ -148,6 +159,7 @@ export function TransactionForm({
         amount: String(amount),
         fee: String(fee),
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
+        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
         occurredAt: draft.occurredAt || new Date().toISOString(),
       });
     } catch (err) {
@@ -241,6 +253,25 @@ export function TransactionForm({
             </Text>
             <Text style={styles.claimedBody}>
               Mark when this cash out has already been claimed.
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
+
+      {draft.type === 'cash_in' ? (
+        <Pressable
+          onPress={() => update('completed', !draft.completed)}
+          style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}
+        >
+          <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
+            {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+          </View>
+          <View style={styles.claimedCopy}>
+            <Text style={styles.claimedTitle}>
+              {draft.completed ? 'Completed' : 'Not completed'}
+            </Text>
+            <Text style={styles.claimedBody}>
+              Mark when this cash in is fully completed.
             </Text>
           </View>
         </Pressable>

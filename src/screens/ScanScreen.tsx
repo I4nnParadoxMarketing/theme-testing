@@ -11,11 +11,12 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SAMPLE_CASH_IN_PARSED } from '../ocr/sampleCashIn';
 import { parseGCashReceipt } from '../ocr/parseGCashReceipt';
 import { recognizeTextFromImage } from '../ocr/recognizeText';
 import { SAMPLE_EXPRESS_SEND_PARSED } from '../ocr/sampleExpressSend';
 import { colors, radii, spacing } from '../theme';
-import type { ParsedReceipt, TransactionSource } from '../types';
+import type { ParsedReceipt, TransactionSource, TransactionType } from '../types';
 
 export interface ScanResult {
   imageUri: string;
@@ -24,17 +25,21 @@ export interface ScanResult {
 }
 
 interface Props {
+  scanType: TransactionType;
   onCancel: () => void;
   onParsed: (result: ScanResult) => void;
 }
 
-export function ScanScreen({ onCancel, onParsed }: Props) {
+export function ScanScreen({ scanType, onCancel, onParsed }: Props) {
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [mode, setMode] = useState<'choose' | 'camera'>('choose');
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState('Ready to read a GCash receipt.');
+  const isCashIn = scanType === 'cash_in';
+  const [status, setStatus] = useState(
+    isCashIn ? 'Ready to read a GCash Cash In receipt.' : 'Ready to read a GCash Cash Out receipt.',
+  );
   const [error, setError] = useState<string | null>(null);
 
   const runOcr = async (uri: string, source: TransactionSource, base64?: string) => {
@@ -46,12 +51,14 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
     try {
       const text = await recognizeTextFromImage(uri, base64);
       const parsed = parseGCashReceipt(text);
+      // Force scanner mode type so cash-in / cash-out stay separate.
+      const forced: ParsedReceipt = { ...parsed, type: scanType };
       setStatus(
-        parsed.amount
-          ? `Found ${parsed.type === 'cash_out' ? 'cash out' : parsed.type === 'cash_in' ? 'cash in' : 'amount'} — review next.`
+        forced.amount
+          ? `Found ${isCashIn ? 'cash in' : 'cash out'} ₱${forced.amount.toFixed(2)} — review next.`
           : 'Text found. Confirm the details on the next screen.',
       );
-      onParsed({ imageUri: uri, parsed, source });
+      onParsed({ imageUri: uri, parsed: forced, source });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not read this image.';
       setError(
@@ -69,12 +76,21 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
     setBusy(true);
     setError(null);
     setPreviewUri(null);
-    setStatus('Loaded Express Send sample (₱200.00).');
-    onParsed({
-      imageUri: '',
-      parsed: SAMPLE_EXPRESS_SEND_PARSED,
-      source: 'upload',
-    });
+    if (isCashIn) {
+      setStatus('Loaded Cash In sample (₱1,000.00).');
+      onParsed({
+        imageUri: '',
+        parsed: SAMPLE_CASH_IN_PARSED,
+        source: 'upload',
+      });
+    } else {
+      setStatus('Loaded Express Send / Cash Out sample (₱200.00).');
+      onParsed({
+        imageUri: '',
+        parsed: SAMPLE_EXPRESS_SEND_PARSED,
+        source: 'upload',
+      });
+    }
     setBusy(false);
   };
 
@@ -180,10 +196,14 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.panel} keyboardShouldPersistTaps="handled">
-        <Text style={styles.brand}>Scan</Text>
-        <Text style={styles.title}>Read cash in / cash out</Text>
+        <Text style={styles.brand}>{isCashIn ? 'Cash In scanner' : 'Cash Out scanner'}</Text>
+        <Text style={styles.title}>
+          {isCashIn ? 'Scan Cash In receipt' : 'Scan Cash Out receipt'}
+        </Text>
         <Text style={styles.body}>
-          Upload a GCash Express Send / cash in / cash out screenshot. Needs internet for OCR.
+          {isCashIn
+            ? 'Upload or photograph a GCash Cash In success screen. Needs internet for OCR.'
+            : 'Upload or photograph a GCash Cash Out / Express Send success screen. Needs internet for OCR.'}
         </Text>
 
         {previewUri ? (
@@ -227,7 +247,7 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
           disabled={busy}
         />
         <PrimaryButton
-          label="Use sample Express Send (₱200)"
+          label={isCashIn ? 'Use sample Cash In (₱1,000)' : 'Use sample Cash Out (₱200)'}
           onPress={useSampleReceipt}
           variant="secondary"
           style={styles.gap}

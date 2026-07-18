@@ -7,11 +7,18 @@ interface Props {
   transaction: Transaction;
   onPress: (transaction: Transaction) => void;
   onToggleClaimed?: (transaction: Transaction) => void;
+  onToggleCompleted?: (transaction: Transaction) => void;
 }
 
-export function TransactionRow({ transaction, onPress, onToggleClaimed }: Props) {
+export function TransactionRow({
+  transaction,
+  onPress,
+  onToggleClaimed,
+  onToggleCompleted,
+}: Props) {
   const isIn = transaction.type === 'cash_in';
   const isClaimed = Boolean(transaction.claimed);
+  const isCompleted = Boolean(transaction.completed);
 
   return (
     <Pressable
@@ -27,7 +34,25 @@ export function TransactionRow({ transaction, onPress, onToggleClaimed }: Props)
       <View style={styles.content}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{formatType(transaction.type)}</Text>
-          {!isIn ? (
+          {isIn ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onToggleCompleted?.(transaction);
+              }}
+              hitSlop={8}
+              style={[styles.claimPill, isCompleted ? styles.claimPillOn : styles.claimPillOff]}
+            >
+              <Text
+                style={[
+                  styles.claimPillText,
+                  isCompleted ? styles.claimOnText : styles.claimOffText,
+                ]}
+              >
+                {isCompleted ? 'Completed' : 'Not completed'}
+              </Text>
+            </Pressable>
+          ) : (
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
@@ -36,11 +61,13 @@ export function TransactionRow({ transaction, onPress, onToggleClaimed }: Props)
               hitSlop={8}
               style={[styles.claimPill, isClaimed ? styles.claimPillOn : styles.claimPillOff]}
             >
-              <Text style={[styles.claimPillText, isClaimed ? styles.claimOnText : styles.claimOffText]}>
+              <Text
+                style={[styles.claimPillText, isClaimed ? styles.claimOnText : styles.claimOffText]}
+              >
                 {isClaimed ? 'Claimed' : 'Unclaimed'}
               </Text>
             </Pressable>
-          ) : null}
+          )}
         </View>
         <Text style={styles.meta} numberOfLines={1}>
           {transaction.counterparty || transaction.reference || 'No reference'}

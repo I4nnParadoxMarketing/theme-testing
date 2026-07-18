@@ -4,6 +4,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -23,23 +24,36 @@ const PERIODS: { id: ReportPeriod; label: string }[] = [
   { id: 'week', label: 'Weekly' },
   { id: 'month', label: 'Monthly' },
   { id: 'year', label: 'Yearly' },
+  { id: 'custom', label: 'Custom' },
   { id: 'all', label: 'All time' },
   { id: 'unclaimed', label: 'Unclaimed' },
+  { id: 'incomplete', label: 'Incomplete' },
   { id: 'fees', label: 'Fees' },
 ];
+
+function todayIsoDate(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 export function ReportsScreen({ onBack }: Props) {
   const { transactions } = useTransactions();
   const [period, setPeriod] = useState<ReportPeriod>('today');
+  const [fromDate, setFromDate] = useState(todayIsoDate());
+  const [toDate, setToDate] = useState(todayIsoDate());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
 
-  const report = useMemo(() => buildReport(transactions, period), [transactions, period]);
+  const report = useMemo(
+    () => buildReport(transactions, period, new Date(), { from: fromDate, to: toDate }),
+    [transactions, period, fromDate, toDate],
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-      <ScrollView contentContainerStyle={styles.container}>
+      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
         <Text style={styles.brand}>Reports</Text>
         <Text style={styles.title}>{report.title}</Text>
         <Text style={styles.subtitle}>{report.subtitle}</Text>
@@ -62,6 +76,29 @@ export function ReportsScreen({ onBack }: Props) {
             })}
           </View>
         </ScrollView>
+
+        {period === 'custom' ? (
+          <View style={styles.customBox}>
+            <Text style={styles.customLabel}>From date (YYYY-MM-DD)</Text>
+            <TextInput
+              value={fromDate}
+              onChangeText={setFromDate}
+              placeholder="2026-07-01"
+              placeholderTextColor={colors.inkSoft}
+              autoCapitalize="none"
+              style={styles.input}
+            />
+            <Text style={styles.customLabel}>To date (YYYY-MM-DD)</Text>
+            <TextInput
+              value={toDate}
+              onChangeText={setToDate}
+              placeholder="2026-07-18"
+              placeholderTextColor={colors.inkSoft}
+              autoCapitalize="none"
+              style={styles.input}
+            />
+          </View>
+        ) : null}
 
         <View style={styles.summaryGrid}>
           {report.summary.map((row) => (
@@ -106,7 +143,13 @@ export function ReportsScreen({ onBack }: Props) {
               <View style={styles.rowMain}>
                 <Text style={styles.rowTitle}>
                   {formatType(tx.type)}
-                  {tx.type === 'cash_out' ? (tx.claimed ? ' · Claimed' : ' · Unclaimed') : ''}
+                  {tx.type === 'cash_out'
+                    ? tx.claimed
+                      ? ' · Claimed'
+                      : ' · Unclaimed'
+                    : tx.completed
+                      ? ' · Completed'
+                      : ' · Not completed'}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
                   {tx.reference || tx.counterparty || 'No reference'}
@@ -165,6 +208,30 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   periodTextOn: { color: colors.white },
+  customBox: {
+    backgroundColor: colors.mist,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  customLabel: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 12,
+    color: colors.inkSoft,
+    marginBottom: spacing.xs,
+  },
+  input: {
+    minHeight: 44,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 15,
+    color: colors.ink,
+    marginBottom: spacing.sm,
+  },
   summaryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

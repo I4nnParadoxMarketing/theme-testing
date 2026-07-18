@@ -36,6 +36,7 @@ function draftFromScan(scan: ScanResult): TransactionDraft {
     occurredAt: scan.parsed.occurredAt ?? new Date().toISOString(),
     source: scan.source,
     claimed: false,
+    completed: false,
     rawText: scan.parsed.rawText,
     imageUri: scan.imageUri || undefined,
   };
@@ -52,6 +53,7 @@ function emptyDraft(): TransactionDraft {
     occurredAt: new Date().toISOString(),
     source: 'manual',
     claimed: false,
+    completed: false,
   };
 }
 
@@ -98,6 +100,7 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
         note: draft.note.trim() || undefined,
         occurredAt,
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
+        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       });
@@ -114,6 +117,7 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
         createdAt: new Date().toISOString(),
         source: draft.source || 'manual',
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
+        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       };

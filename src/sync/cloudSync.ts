@@ -284,11 +284,12 @@ export function mergeTransactions(local: Transaction[], remote: Transaction[]): 
     }
     const existingTime = Date.parse(existing.createdAt || existing.occurredAt) || 0;
     const nextTime = Date.parse(item.createdAt || item.occurredAt) || 0;
-    // Prefer claimed=true and newer timestamps for same id
+    // Prefer claimed/completed=true and newer timestamps for same id
     map.set(item.id, {
       ...existing,
       ...item,
       claimed: Boolean(existing.claimed || item.claimed),
+      completed: Boolean(existing.completed || item.completed),
       createdAt: existingTime <= nextTime ? existing.createdAt : item.createdAt,
     });
   }
@@ -309,7 +310,11 @@ export function mergeTransactions(local: Transaction[], remote: Transaction[]): 
     }
     const prevTime = Date.parse(prev.occurredAt || prev.createdAt) || 0;
     const itemTime = Date.parse(item.occurredAt || item.createdAt) || 0;
-    byRef.set(ref, itemTime >= prevTime ? { ...item, claimed: Boolean(prev.claimed || item.claimed) } : { ...prev, claimed: Boolean(prev.claimed || item.claimed) });
+    const mergedFlags = {
+      claimed: Boolean(prev.claimed || item.claimed),
+      completed: Boolean(prev.completed || item.completed),
+    };
+    byRef.set(ref, itemTime >= prevTime ? { ...item, ...mergedFlags } : { ...prev, ...mergedFlags });
   }
 
   return [...byRef.values(), ...noRef].sort(

@@ -15,6 +15,8 @@ export interface Transaction {
   source: TransactionSource;
   /** Cash-out only: whether the payout has been claimed. */
   claimed?: boolean;
+  /** Cash-in only: whether the cash in is completed. */
+  completed?: boolean;
   rawText?: string;
   imageUri?: string;
 }
@@ -38,4 +40,6 @@ export interface BalanceSummary {
   count: number;
   claimedCount: number;
   unclaimedCount: number;
+  completedCount: number;
+  incompleteCount: number;
 }

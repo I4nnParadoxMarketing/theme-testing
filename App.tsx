@@ -15,11 +15,11 @@ import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ScanScreen, type ScanResult } from './src/screens/ScanScreen';
 import { SyncScreen } from './src/screens/SyncScreen';
 import { colors } from './src/theme';
-import type { Transaction } from './src/types';
+import type { Transaction, TransactionType } from './src/types';
 
 type Screen =
   | { name: 'home' }
-  | { name: 'scan' }
+  | { name: 'scan'; scanType: TransactionType }
   | { name: 'sync' }
   | { name: 'reports' }
   | { name: 'review'; mode: 'create' | 'edit' | 'from-scan'; scan?: ScanResult; transaction?: Transaction };
@@ -47,7 +47,8 @@ export default function App() {
         <StatusBar style="dark" />
         {screen.name === 'home' ? (
           <HomeScreen
-            onScan={() => setScreen({ name: 'scan' })}
+            onScanCashIn={() => setScreen({ name: 'scan', scanType: 'cash_in' })}
+            onScanCashOut={() => setScreen({ name: 'scan', scanType: 'cash_out' })}
             onManual={() => setScreen({ name: 'review', mode: 'create' })}
             onOpenTransaction={(transaction) =>
               setScreen({ name: 'review', mode: 'edit', transaction })
@@ -59,6 +60,7 @@ export default function App() {
 
         {screen.name === 'scan' ? (
           <ScanScreen
+            scanType={screen.scanType}
             onCancel={() => setScreen({ name: 'home' })}
             onParsed={(scan) => setScreen({ name: 'review', mode: 'from-scan', scan })}
           />

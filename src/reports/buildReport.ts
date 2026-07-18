@@ -6,8 +6,10 @@ export type ReportPeriod =
   | 'week'
   | 'month'
   | 'year'
+  | 'custom'
   | 'all'
   | 'unclaimed'
+  | 'incomplete'
   | 'fees';
 
 export interface ReportRow {
@@ -23,10 +25,28 @@ export interface BuiltReport {
   transactions: Transaction[];
 }
 
+export interface CustomDateRange {
+  from: string; // YYYY-MM-DD
+  to: string; // YYYY-MM-DD
+}
+
 function startOfDay(date: Date): Date {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);
   return d;
+}
+
+function endOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function parseDateInput(value: string, end = false): Date | null {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return null;
+  return end ? endOfDay(date) : startOfDay(date);
 }
 
 function inRange(tx: Transaction, from: Date | null, to: Date | null): boolean {
@@ -43,19 +63,39 @@ function summarize(transactions: Transaction[]) {
   let fees = 0;
   let claimed = 0;
   let unclaimed = 0;
+  let completed = 0;
+  let incomplete = 0;
   for (const item of transactions) {
-    if (item.type === 'cash_in') cashIn += item.amount;
-    else {
+    if (item.type === 'cash_in') {
+      cashIn += item.amount;
+      if (item.completed) completed += 1;
+      else incomplete += 1;
+    } else {
       cashOut += item.amount;
       if (item.claimed) claimed += 1;
       else unclaimed += 1;
     }
     fees += item.fee || 0;
   }
-  return { cashIn, cashOut, fees, claimed, unclaimed, count: transactions.length, net: cashIn - cashOut - fees };
+  return {
+    cashIn,
+    cashOut,
+    fees,
+    claimed,
+    unclaimed,
+    completed,
+    incomplete,
+    count: transactions.length,
+    net: cashIn - cashOut - fees,
+  };
 }
 
-export function buildReport(all: Transaction[], period: ReportPeriod, now = new Date()): BuiltReport {
+export function buildReport(
+  all: Transaction[],
+  period: ReportPeriod,
+  now = new Date(),
+  custom?: CustomDateRange,
+): BuiltReport {
   const todayStart = startOfDay(now);
   let filtered = all;
   let title = 'All time';
@@ -63,7 +103,12 @@ export function buildReport(all: Transaction[], period: ReportPeriod, now = new 
 
   if (period === 'today') {
     title = 'Today';
-    subtitle = todayStart.toLocaleDateString('en-PH', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+    subtitle = todayStart.toLocaleDateString('en-PH', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
     filtered = all.filter((tx) => inRange(tx, todayStart, null));
   } else if (period === 'week') {
     const from = new Date(todayStart);
@@ -81,10 +126,25 @@ export function buildReport(all: Transaction[], period: ReportPeriod, now = new 
     title = 'This year';
     subtitle = String(now.getFullYear());
     filtered = all.filter((tx) => inRange(tx, from, null));
+  } else if (period === 'custom') {
+    title = 'Custom range';
+    const from = parseDateInput(custom?.from || '', false);
+    const to = parseDateInput(custom?.to || '', true);
+    if (from && to) {
+      subtitle = `${custom?.from} → ${custom?.to}`;
+      filtered = all.filter((tx) => inRange(tx, from, to));
+    } else {
+      subtitle = 'Enter a valid From and To date (YYYY-MM-DD)';
+      filtered = [];
+    }
   } else if (period === 'unclaimed') {
     title = 'Unclaimed cash outs';
     subtitle = 'Cash outs not yet marked claimed';
     filtered = all.filter((tx) => tx.type === 'cash_out' && !tx.claimed);
+  } else if (period === 'incomplete') {
+    title = 'Incomplete cash ins';
+    subtitle = 'Cash ins not yet marked completed';
+    filtered = all.filter((tx) => tx.type === 'cash_in' && !tx.completed);
   } else if (period === 'fees') {
     title = 'Fees collected';
     subtitle = 'Transactions that include a fee';
@@ -104,6 +164,8 @@ export function buildReport(all: Transaction[], period: ReportPeriod, now = new 
     summary.push(
       { label: 'Claimed outs', value: String(stats.claimed) },
       { label: 'Unclaimed outs', value: String(stats.unclaimed) },
+      { label: 'Completed ins', value: String(stats.completed) },
+      { label: 'Incomplete ins', value: String(stats.incomplete) },
     );
   }
 
@@ -118,13 +180,14 @@ export function reportToCsv(report: BuiltReport): string {
     'Summary',
     ...report.summary.map((row) => `${row.label},${row.value.replace(/₱/g, 'PHP ')}`),
     '',
-    'Type,Amount,Fee,Claimed,Reference,Counterparty,When,Note',
+    'Type,Amount,Fee,Claimed,Completed,Reference,Counterparty,When,Note',
     ...report.transactions.map((tx) =>
       [
         formatType(tx.type),
         tx.amount.toFixed(2),
         (tx.fee || 0).toFixed(2),
         tx.type === 'cash_out' ? (tx.claimed ? 'Yes' : 'No') : '',
+        tx.type === 'cash_in' ? (tx.completed ? 'Yes' : 'No') : '',
         `"${(tx.reference || '').replace(/"/g, '""')}"`,
         `"${(tx.counterparty || '').replace(/"/g, '""')}"`,
         `"${formatDateTime(tx.occurredAt)}"`,
