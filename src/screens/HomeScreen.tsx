@@ -22,6 +22,7 @@ import { useTransactions } from '../context/TransactionsContext';
 import { colors, radii, spacing } from '../theme';
 import type { Transaction } from '../types';
 import { formatPeso } from '../utils/format';
+import { buildGreeting } from '../utils/greeting';
 import { computeTodayStats } from '../utils/todayStats';
 
 interface Props {
@@ -41,12 +42,16 @@ export function HomeScreen({
   onOpenSettings,
   onOpenNotifications,
 }: Props) {
-  const { isAdmin, logout } = useAuth();
+  const { isAdmin, logout, currentUser } = useAuth();
   const { transactions, summary, ready, setClaimed, setCompleted } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
   const [startingBudget, setStartingBudget] = useState(0);
   const alertCount = summary.incompleteCount + summary.unclaimedCount;
+  const greeting = useMemo(
+    () => buildGreeting(currentUser?.displayName, currentUser?.username),
+    [currentUser?.displayName, currentUser?.username],
+  );
 
   useEffect(() => {
     Animated.parallel([
@@ -89,6 +94,13 @@ export function HomeScreen({
               <SettingsIconButton onPress={onOpenSettings} />
               <LogoutIconButton onPress={() => void logout()} />
             </View>
+          </View>
+
+          <View style={styles.greetingBlock}>
+            <Text style={styles.greeting}>{greeting}</Text>
+            <Text style={styles.greetingMeta}>
+              {isAdmin ? 'Admin account' : 'Staff account'} · ready for today’s cash flow
+            </Text>
           </View>
 
           <BalanceHero summary={summary} today={today} startingBudget={startingBudget} />
@@ -174,6 +186,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 2,
+  },
+  greetingBlock: {
+    marginBottom: spacing.md,
+  },
+  greeting: {
+    fontFamily: 'Fraunces_700Bold',
+    fontSize: 28,
+    color: colors.ink,
+    letterSpacing: -0.4,
+  },
+  greetingMeta: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 14,
+    color: colors.inkSoft,
+    marginTop: 4,
   },
   actions: {
     flexDirection: 'row',
