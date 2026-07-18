@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadDailyBudget } from '../budget';
 import { BalanceHero } from '../components/BalanceHero';
+import { NotificationBell } from '../components/NotificationBell';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TransactionRow } from '../components/TransactionRow';
 import { useAuth } from '../context/AuthContext';
@@ -26,6 +27,7 @@ interface Props {
   onOpenCashOut: () => void;
   onOpenTransaction: (transaction: Transaction) => void;
   onOpenSettings: () => void;
+  onOpenNotifications: () => void;
 }
 
 const useNativeDriver = Platform.OS !== 'web';
@@ -35,12 +37,14 @@ export function HomeScreen({
   onOpenCashOut,
   onOpenTransaction,
   onOpenSettings,
+  onOpenNotifications,
 }: Props) {
   const { isAdmin } = useAuth();
   const { transactions, summary, ready, setClaimed, setCompleted } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
   const [startingBudget, setStartingBudget] = useState(0);
+  const alertCount = summary.incompleteCount + summary.unclaimedCount;
 
   useEffect(() => {
     Animated.parallel([
@@ -78,7 +82,7 @@ export function HomeScreen({
           style={{ opacity: fade, transform: [{ translateY: rise }] }}
         >
           <View style={styles.topBar}>
-            <View style={styles.topBarSpacer} />
+            <NotificationBell count={alertCount} onPress={onOpenNotifications} />
             <Pressable onPress={onOpenSettings} hitSlop={10} style={styles.settingsBtn}>
               <Text style={styles.settingsText}>Settings</Text>
             </Pressable>
@@ -160,11 +164,8 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     marginBottom: spacing.sm,
-  },
-  topBarSpacer: {
-    flex: 1,
   },
   settingsBtn: {
     paddingVertical: 6,

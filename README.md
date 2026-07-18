@@ -10,6 +10,7 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 - **Account settings**: change password; admin can add / update / deactivate staff
 - Accounts sync **online** with Cloud sync
 - Clean dashboard: today’s money, Cash In / Cash Out, recent activity
+- **Notification bell** for incomplete cash ins and unclaimed cash outs
 - **Settings**: today’s budget, account, reports, and cloud sync
 - **Fee profit** shown for today and all-time
 - Dedicated **Cash In** and **Cash Out** screens with scan + manual entry inside each
@@ -23,9 +24,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.2.1/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.2.2/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.2.1
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.2.2
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted

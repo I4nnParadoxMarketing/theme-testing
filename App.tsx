@@ -13,6 +13,7 @@ import { TransactionsProvider } from './src/context/TransactionsContext';
 import { AccountScreen } from './src/screens/AccountScreen';
 import { HomeScreen } from './src/screens/HomeScreen';
 import { LoginScreen } from './src/screens/LoginScreen';
+import { NotificationsScreen } from './src/screens/NotificationsScreen';
 import { ReportsScreen } from './src/screens/ReportsScreen';
 import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ScanScreen, type ScanResult } from './src/screens/ScanScreen';
@@ -26,12 +27,14 @@ type ReturnTarget =
   | { name: 'home' }
   | { name: 'typeHub'; type: TransactionType }
   | { name: 'settings' }
-  | { name: 'account' };
+  | { name: 'account' }
+  | { name: 'notifications' };
 
 type Screen =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'account' }
+  | { name: 'notifications' }
   | { name: 'typeHub'; type: TransactionType }
   | { name: 'scan'; scanType: TransactionType; returnTo: ReturnTarget }
   | { name: 'sync'; returnTo: ReturnTarget }
@@ -82,6 +85,22 @@ function AppShell() {
             })
           }
           onOpenSettings={() => setScreen({ name: 'settings' })}
+          onOpenNotifications={() => setScreen({ name: 'notifications' })}
+        />
+      ) : null}
+
+      {screen.name === 'notifications' ? (
+        <NotificationsScreen
+          onBack={() => setScreen({ name: 'home' })}
+          onOpenTransaction={(transaction) =>
+            setScreen({
+              name: 'review',
+              mode: 'edit',
+              transaction,
+              lockedType: transaction.type,
+              returnTo: { name: 'notifications' },
+            })
+          }
         />
       ) : null}
 
