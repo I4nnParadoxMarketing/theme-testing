@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -181,9 +182,9 @@ export function ScanScreen({ scanType, onCancel, onParsed }: Props) {
           <View style={styles.cameraActions}>
             <PrimaryButton label="Capture" onPress={captureWithLiveCamera} disabled={busy} />
             <PrimaryButton
-              label="Cancel"
+              label="Back"
               onPress={() => setMode('choose')}
-              variant="secondary"
+              variant="ghost"
               style={styles.gap}
               disabled={busy}
             />
@@ -196,6 +197,9 @@ export function ScanScreen({ scanType, onCancel, onParsed }: Props) {
   return (
     <SafeAreaView style={styles.safe}>
       <ScrollView contentContainerStyle={styles.panel} keyboardShouldPersistTaps="handled">
+        <Pressable onPress={onCancel} hitSlop={10} disabled={busy}>
+          <Text style={styles.backLink}>← Back</Text>
+        </Pressable>
         <Text style={styles.brand}>{isCashIn ? 'Cash In scanner' : 'Cash Out scanner'}</Text>
         <Text style={styles.title}>
           {isCashIn ? 'Scan Cash In receipt' : 'Scan Cash Out receipt'}
@@ -273,6 +277,12 @@ const styles = StyleSheet.create({
   panel: {
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
+  },
+  backLink: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 15,
+    color: colors.ocean,
+    marginBottom: spacing.md,
   },
   brand: {
     fontFamily: 'Fraunces_700Bold',

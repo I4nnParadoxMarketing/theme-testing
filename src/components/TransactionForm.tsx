@@ -198,6 +198,10 @@ export function TransactionForm({
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <Pressable onPress={onCancel} hitSlop={10} disabled={saving}>
+        <Text style={styles.back}>← Back</Text>
+      </Pressable>
+
       {draft.imageUri ? (
         <Image source={{ uri: draft.imageUri }} style={styles.preview} resizeMode="cover" />
       ) : null}
@@ -383,9 +387,9 @@ export function TransactionForm({
         disabled={saving}
       />
       <PrimaryButton
-        label="Cancel"
+        label="Back"
         onPress={onCancel}
-        variant="secondary"
+        variant="ghost"
         style={styles.action}
         disabled={saving}
       />
@@ -424,6 +428,12 @@ const styles = StyleSheet.create({
   container: {
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
+  },
+  back: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 15,
+    color: colors.ocean,
+    marginBottom: spacing.md,
   },
   preview: {
     width: '100%',

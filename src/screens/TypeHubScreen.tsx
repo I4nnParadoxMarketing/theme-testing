@@ -1,5 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TransactionRow } from '../components/TransactionRow';
@@ -17,6 +26,10 @@ interface Props {
   onOpenTransaction: (transaction: Transaction) => void;
 }
 
+function normalizeSearch(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, '');
+}
+
 export function TypeHubScreen({
   type,
   onBack,
@@ -26,10 +39,26 @@ export function TypeHubScreen({
 }: Props) {
   const { isAdmin } = useAuth();
   const { transactions, ready, setClaimed, setCompleted } = useTransactions();
+  const [referenceQuery, setReferenceQuery] = useState('');
   const isIn = type === 'cash_in';
-  const filtered = transactions.filter((tx) => tx.type === type);
+
+  const filtered = useMemo(() => {
+    const byType = transactions.filter((tx) => tx.type === type);
+    if (isIn) return byType;
+
+    const query = normalizeSearch(referenceQuery);
+    if (!query) return byType;
+
+    return byType.filter((tx) => {
+      const ref = normalizeSearch(tx.reference || '');
+      const party = (tx.counterparty || '').trim().toLowerCase();
+      return ref.includes(query) || party.includes(referenceQuery.trim().toLowerCase());
+    });
+  }, [transactions, type, isIn, referenceQuery]);
+
   const total = filtered.reduce((sum, tx) => sum + tx.amount, 0);
   const fees = filtered.reduce((sum, tx) => sum + (tx.fee || 0), 0);
+  const allOfType = transactions.filter((tx) => tx.type === type).length;
 
   return (
     <View style={styles.root}>
@@ -39,7 +68,10 @@ export function TypeHubScreen({
         style={StyleSheet.absoluteFill}
       />
       <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+        >
           <Pressable onPress={onBack} hitSlop={10}>
             <Text style={styles.back}>← Dashboard</Text>
           </Pressable>
@@ -51,12 +83,14 @@ export function TypeHubScreen({
           <Text style={styles.support}>
             {isIn
               ? 'Scan a Cash In receipt or add one manually. Mark Completed when done.'
-              : 'Scan a Cash Out receipt or add one manually. Mark Claimed when paid.'}
+              : 'Scan a Cash Out receipt or add one manually. Search by reference to find a payout.'}
           </Text>
 
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Total</Text>
+              <Text style={styles.summaryLabel}>
+                {isIn || !normalizeSearch(referenceQuery) ? 'Total' : 'Matches'}
+              </Text>
               <Text style={styles.summaryValue}>{formatPeso(total)}</Text>
             </View>
             <View style={styles.summaryItem}>
@@ -77,18 +111,44 @@ export function TypeHubScreen({
             />
           </View>
 
+          {!isIn ? (
+            <View style={styles.searchBox}>
+              <Text style={styles.searchLabel}>Search reference</Text>
+              <TextInput
+                value={referenceQuery}
+                onChangeText={setReferenceQuery}
+                placeholder="Enter Ref No."
+                placeholderTextColor={colors.inkSoft}
+                autoCapitalize="characters"
+                autoCorrect={false}
+                style={styles.searchInput}
+              />
+              {normalizeSearch(referenceQuery) ? (
+                <Text style={styles.searchMeta}>
+                  {filtered.length} of {allOfType} cash outs
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
+
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>{formatType(type)} activity</Text>
             <Text style={styles.sectionMeta}>
-              {ready ? `${filtered.length} saved` : 'Loading…'}
+              {ready ? `${filtered.length} shown` : 'Loading…'}
             </Text>
           </View>
 
           {ready && filtered.length === 0 ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyTitle}>Nothing here yet</Text>
+              <Text style={styles.emptyTitle}>
+                {!isIn && normalizeSearch(referenceQuery)
+                  ? 'No matching reference'
+                  : 'Nothing here yet'}
+              </Text>
               <Text style={styles.emptyBody}>
-                Scan a GCash {isIn ? 'Cash In' : 'Cash Out'} receipt image, or enter details by hand.
+                {!isIn && normalizeSearch(referenceQuery)
+                  ? 'Try another Ref No., or clear the search to see all cash outs.'
+                  : `Scan a GCash ${isIn ? 'Cash In' : 'Cash Out'} receipt image, or enter details by hand.`}
               </Text>
             </View>
           ) : (
@@ -185,6 +245,35 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   actionFlex: { flex: 1 },
+  searchBox: {
+    backgroundColor: colors.white,
+    borderRadius: radii.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  searchLabel: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginBottom: 6,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radii.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 12,
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 16,
+    color: colors.ink,
+    backgroundColor: colors.paper,
+  },
+  searchMeta: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginTop: spacing.sm,
+  },
   sectionHead: {
     flexDirection: 'row',
     alignItems: 'baseline',
