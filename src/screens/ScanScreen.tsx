@@ -257,7 +257,6 @@ export function ScanScreen({ scanType, onCancel, onParsed }: Props) {
           style={styles.gap}
           disabled={busy}
         />
-        <PrimaryButton label="Back" onPress={onCancel} variant="ghost" style={styles.gap} disabled={busy} />
       </ScrollView>
     </SafeAreaView>
   );

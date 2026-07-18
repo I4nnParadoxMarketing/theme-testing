@@ -386,13 +386,6 @@ export function TransactionForm({
         loading={saving}
         disabled={saving}
       />
-      <PrimaryButton
-        label="Back"
-        onPress={onCancel}
-        variant="ghost"
-        style={styles.action}
-        disabled={saving}
-      />
       {onDelete ? (
         <PrimaryButton
           label="Delete"
