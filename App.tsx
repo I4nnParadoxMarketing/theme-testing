@@ -10,14 +10,18 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { TransactionsProvider } from './src/context/TransactionsContext';
 import { HomeScreen } from './src/screens/HomeScreen';
+import { ReportsScreen } from './src/screens/ReportsScreen';
 import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ScanScreen, type ScanResult } from './src/screens/ScanScreen';
+import { SyncScreen } from './src/screens/SyncScreen';
 import { colors } from './src/theme';
 import type { Transaction } from './src/types';
 
 type Screen =
   | { name: 'home' }
   | { name: 'scan' }
+  | { name: 'sync' }
+  | { name: 'reports' }
   | { name: 'review'; mode: 'create' | 'edit' | 'from-scan'; scan?: ScanResult; transaction?: Transaction };
 
 export default function App() {
@@ -48,6 +52,8 @@ export default function App() {
             onOpenTransaction={(transaction) =>
               setScreen({ name: 'review', mode: 'edit', transaction })
             }
+            onOpenSync={() => setScreen({ name: 'sync' })}
+            onOpenReports={() => setScreen({ name: 'reports' })}
           />
         ) : null}
 
@@ -56,6 +62,14 @@ export default function App() {
             onCancel={() => setScreen({ name: 'home' })}
             onParsed={(scan) => setScreen({ name: 'review', mode: 'from-scan', scan })}
           />
+        ) : null}
+
+        {screen.name === 'sync' ? (
+          <SyncScreen onBack={() => setScreen({ name: 'home' })} />
+        ) : null}
+
+        {screen.name === 'reports' ? (
+          <ReportsScreen onBack={() => setScreen({ name: 'home' })} />
         ) : null}
 
         {screen.name === 'review' ? (

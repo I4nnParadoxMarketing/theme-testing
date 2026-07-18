@@ -2,74 +2,74 @@
 
 Mobile app for tracking **GCash cash in** and **cash out**.
 
-Capture a receipt with the camera, upload a screenshot, or enter a transaction manually. On-device OCR reads the receipt text and fills amount, fee, reference, type, and date for review before saving.
+Capture a receipt with the camera, upload a screenshot, or enter a transaction manually. OCR reads the receipt text and fills amount, fee, reference, type, and date for review before saving.
 
 ## Features
 
 - Cash in / cash out ledger with net balance
-- Live camera capture and gallery upload
-- OCR text extraction (Tesseract.js)
-- GCash receipt parsing (amount, fee, ref no., counterparty, date)
-- Local persistence on device (AsyncStorage)
-- Manual entry and edit / delete
+- Camera / gallery receipt scan with OCR
+- Claimed marker + auto fee rules for cash outs
+- Duplicate Ref No. blocking
+- **Cloud sync** across phones with a shared sync code
+- **Reports**: today, weekly, monthly, yearly, unclaimed, fees — downloadable CSV
+- Local persistence on device
 
 ## Try on Android (installer)
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.0.4/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.0/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.0.4
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.0
 
 1. Open the download link on your Android phone
-2. Allow **Install unknown apps** for your browser/Files app if prompted
-3. Open the downloaded file and tap **Install**
-4. Open **GCashFlow** and allow camera / photos when prompted
+2. Allow **Install unknown apps** if prompted
+3. Install, then open **GCashFlow**
 
 Package id: `com.gcashflow.tracker`
 
-## Try instantly with Expo Go
+## Cloud sync (multi-device)
 
-1. Install [Expo Go](https://play.google.com/store/apps/details?id=host.exp.exponent) from the Play Store
-2. Open this link on your phone (while the cloud tunnel is running):
+1. On phone A open **Cloud sync**
+2. Tap **Create new sync code** (Quick sync works immediately)
+3. Tap **Copy sync code**
+4. On phone B open **Cloud sync** → paste code → **Join & download transactions**
+5. New saves upload automatically when sync is enabled
 
-   `exp://c_sqwr8-anonymous-8081.exp.direct`
+For short permanent codes, create a free Pantry at [getpantry.cloud](https://getpantry.cloud/), paste the Pantry ID in Sync settings, then create a sync code.
+
+## Reports & download
+
+Open **Reports** to view:
+
+- Today
+- Weekly (last 7 days)
+- Monthly
+- Yearly
+- All time
+- Unclaimed cash outs
+- Fees
+
+Tap **Download CSV** and save/share the file (Files, Drive, email, etc.).
+
+## Cash out rules
+
+- **Claimed** marker on cash outs
+- **Duplicate Ref No.** blocked with an error
+- **Auto fee** (editable): ≤99 → ₱5 · 100–500 → ₱10 · 501–1000 → ₱15 · each full ₱1,000 → ₱15 + same brackets on excess
 
 ## Run from source
 
 ```bash
 npm install
-npm start        # Expo Dev Tools / Expo Go
-npm run web      # browser demo
-npm run android  # native Android build/run
-npm run ios      # iOS simulator (macOS)
+npm start
+npm run web
+npm test
 ```
 
-Build a release APK locally:
+Build a release APK:
 
 ```bash
 npx expo prebuild --platform android
 cd android && ./gradlew assembleRelease
-# output: android/app/build/outputs/apk/release/app-release.apk
 ```
-
-## Tests
-
-```bash
-npm test
-```
-
-## How scanning works
-
-1. Open **Scan receipt**
-2. Use **upload from gallery**, **camera**, or **Use sample Express Send**
-3. OCR reads the screenshot over the internet (no broken on-device worker)
-4. The parser detects Express Send / cash in / cash out and key fields
-5. Confirm or edit details, then save
-
-Supports GCash **Express Send** receipts (amount, Ref No., phone, date). Phone needs internet for OCR.
-
-### Cash out rules
-- **Claimed** marker on cash outs (tap Claimed/Unclaimed on the list or in the form)
-- **Duplicate Ref No.** is blocked with an error message
-- **Auto fee** (editable): ≤99 → ₱5 · 100–500 → ₱10 · 501–1000 → ₱15 · each full ₱1,000 → ₱15, then apply those same brackets to any excess (e.g. ₱1,200 → ₱15+₱10=₱25)

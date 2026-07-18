@@ -20,12 +20,20 @@ interface Props {
   onScan: () => void;
   onManual: () => void;
   onOpenTransaction: (transaction: Transaction) => void;
+  onOpenSync: () => void;
+  onOpenReports: () => void;
 }
 
 const useNativeDriver = Platform.OS !== 'web';
 
-export function HomeScreen({ onScan, onManual, onOpenTransaction }: Props) {
-  const { transactions, summary, ready, setClaimed } = useTransactions();
+export function HomeScreen({
+  onScan,
+  onManual,
+  onOpenTransaction,
+  onOpenSync,
+  onOpenReports,
+}: Props) {
+  const { transactions, summary, ready, setClaimed, syncMeta, syncing } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
 
@@ -60,7 +68,30 @@ export function HomeScreen({ onScan, onManual, onOpenTransaction }: Props) {
             />
           </View>
 
-          <View style={styles.sectionHead}>
+          <View style={styles.actions}>
+            <PrimaryButton
+              label="Reports"
+              onPress={onOpenReports}
+              variant="secondary"
+              style={styles.actionFlex}
+            />
+            <PrimaryButton
+              label={syncMeta.enabled ? (syncing ? 'Syncing…' : 'Cloud sync') : 'Cloud sync'}
+              onPress={onOpenSync}
+              variant="secondary"
+              style={styles.actionFlex}
+              disabled={syncing}
+            />
+          </View>
+
+          {syncMeta.enabled ? (
+            <Text style={styles.syncHint}>
+              Online sync on · code {syncMeta.syncCode.slice(0, 12)}
+              {syncMeta.syncCode.length > 12 ? '…' : ''}
+            </Text>
+          ) : null}
+
+          <View style={[styles.sectionHead, { marginTop: spacing.lg }]}>
             <Text style={styles.sectionTitle}>Recent activity</Text>
             <Text style={styles.sectionMeta}>
               {ready
@@ -116,11 +147,17 @@ const styles = StyleSheet.create({
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
-    marginTop: spacing.lg,
-    marginBottom: spacing.xl,
+    marginTop: spacing.md,
   },
   actionFlex: {
     flex: 1,
+  },
+  syncHint: {
+    fontFamily: 'DMSans_500Medium',
+    fontSize: 13,
+    color: colors.ocean,
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
   },
   sectionHead: {
     flexDirection: 'row',
