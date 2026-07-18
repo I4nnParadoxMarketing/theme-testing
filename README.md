@@ -62,9 +62,9 @@ npm test
 ## How scanning works
 
 1. Open **Scan receipt**
-2. Use **live camera**, **quick camera shot**, or **upload from gallery**
-3. OCR extracts text from the image
-4. The parser detects cash in vs cash out and key fields
+2. Use **upload from gallery**, **camera**, or **Use sample Express Send**
+3. OCR reads the screenshot over the internet (no broken on-device worker)
+4. The parser detects Express Send / cash in / cash out and key fields
 5. Confirm or edit details, then save
 
-Tip: Photograph the full receipt with good lighting. Screenshots of GCash success pages usually parse best.
+Supports GCash **Express Send** receipts (amount, Ref No., phone, date). Phone needs internet for OCR.
