@@ -17,9 +17,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.0.2/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.0.3/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.0.2
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.0.3
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** for your browser/Files app if prompted
@@ -68,3 +68,8 @@ npm test
 5. Confirm or edit details, then save
 
 Supports GCash **Express Send** receipts (amount, Ref No., phone, date). Phone needs internet for OCR.
+
+### Cash out rules
+- **Claimed** marker on cash outs (tap Claimed/Unclaimed on the list or in the form)
+- **Duplicate Ref No.** is blocked with an error message
+- **Auto fee** (editable): ≤99 → ₱5 · 100–500 → ₱10 · 501–1000 → ₱15 · every ₱1,000 above that → ₱15
