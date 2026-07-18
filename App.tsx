@@ -95,6 +95,7 @@ function AppShell() {
               name: 'review',
               mode: 'edit',
               transaction,
+              lockedType: transaction.type,
               returnTo: { name: 'home' },
             })
           }

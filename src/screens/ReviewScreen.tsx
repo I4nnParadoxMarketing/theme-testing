@@ -195,9 +195,8 @@ export function ReviewScreen({
         lockType={Boolean(lockedType)}
         canMarkCompleted={isAdmin}
         onScan={
-          onScan && (lockedType === 'cash_in' || initial.type === 'cash_in')
-            ? onScan
-            : undefined
+          // Available to admin and staff when working on a cash-in entry.
+          onScan && (lockedType ?? initial.type) === 'cash_in' ? onScan : undefined
         }
         submitLabel={mode === 'edit' ? 'Save changes' : 'Save transaction'}
         onSubmit={handleSubmit}
