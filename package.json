@@ -1,6 +1,6 @@
 {
   "name": "gcash-tracker",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "main": "index.ts",
   "dependencies": {
     "@expo-google-fonts/dm-sans": "^0.4.2",
@@ -33,7 +33,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "test": "npx tsx src/ocr/parseGCashReceipt.test.ts && npx tsx src/utils/fee.test.ts && npx tsx src/reports/buildReport.test.ts",
+    "test": "npx tsx src/ocr/parseGCashReceipt.test.ts && npx tsx src/utils/fee.test.ts && npx tsx src/reports/buildReport.test.ts && npx tsx src/utils/todayStats.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "private": true

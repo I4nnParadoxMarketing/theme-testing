@@ -30,6 +30,8 @@ export interface TransactionDraft {
 
 interface Props {
   initial: TransactionDraft;
+  /** When true, hide the Cash In / Cash Out type switcher. */
+  lockType?: boolean;
   submitLabel: string;
   onSubmit: (draft: TransactionDraft) => void | Promise<void>;
   onCancel: () => void;
@@ -73,6 +75,7 @@ function withAutoFee(draft: TransactionDraft, force = false): TransactionDraft {
 
 export function TransactionForm({
   initial,
+  lockType = false,
   submitLabel,
   onSubmit,
   onCancel,
@@ -182,25 +185,39 @@ export function TransactionForm({
       <Text style={styles.heading}>Transaction details</Text>
       <Text style={styles.support}>Confirm what was read from the receipt, then save.</Text>
 
-      <View style={styles.typeRow}>
-        {(['cash_in', 'cash_out'] as TransactionType[]).map((type) => {
-          const active = draft.type === type;
-          return (
-            <Pressable
-              key={type}
-              onPress={() => update('type', type)}
-              style={[
-                styles.typeChip,
-                active && (type === 'cash_in' ? styles.typeIn : styles.typeOut),
-              ]}
-            >
-              <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>
-                {type === 'cash_in' ? 'Cash In' : 'Cash Out'}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      {lockType ? (
+        <View
+          style={[
+            styles.typeChip,
+            styles.lockedType,
+            draft.type === 'cash_in' ? styles.typeIn : styles.typeOut,
+          ]}
+        >
+          <Text style={[styles.typeLabel, styles.typeLabelActive]}>
+            {draft.type === 'cash_in' ? 'Cash In' : 'Cash Out'}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.typeRow}>
+          {(['cash_in', 'cash_out'] as TransactionType[]).map((type) => {
+            const active = draft.type === type;
+            return (
+              <Pressable
+                key={type}
+                onPress={() => update('type', type)}
+                style={[
+                  styles.typeChip,
+                  active && (type === 'cash_in' ? styles.typeIn : styles.typeOut),
+                ]}
+              >
+                <Text style={[styles.typeLabel, active && styles.typeLabelActive]}>
+                  {type === 'cash_in' ? 'Cash In' : 'Cash Out'}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       <Field label="Amount (₱)">
         <TextInput
@@ -413,6 +430,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.mist,
+  },
+  lockedType: {
+    marginBottom: spacing.md,
+    alignSelf: 'stretch',
   },
   typeIn: {
     backgroundColor: colors.cashIn,

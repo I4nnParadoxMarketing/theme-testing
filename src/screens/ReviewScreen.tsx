@@ -16,6 +16,7 @@ interface Props {
   mode: 'create' | 'edit' | 'from-scan';
   scanResult?: ScanResult | null;
   transaction?: Transaction | null;
+  lockedType?: Transaction['type'];
   onDone: () => void;
   onCancel: () => void;
 }
@@ -42,9 +43,9 @@ function draftFromScan(scan: ScanResult): TransactionDraft {
   };
 }
 
-function emptyDraft(): TransactionDraft {
+function emptyDraft(lockedType?: Transaction['type']): TransactionDraft {
   return {
-    type: 'cash_in',
+    type: lockedType ?? 'cash_in',
     amount: '',
     fee: '0',
     reference: '',
@@ -57,16 +58,26 @@ function emptyDraft(): TransactionDraft {
   };
 }
 
-export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }: Props) {
+export function ReviewScreen({
+  mode,
+  scanResult,
+  transaction,
+  lockedType,
+  onDone,
+  onCancel,
+}: Props) {
   const { addTransaction, updateTransaction, deleteTransaction, findByReference } =
     useTransactions();
 
   const initial =
     mode === 'from-scan' && scanResult
-      ? draftFromScan(scanResult)
+      ? {
+          ...draftFromScan(scanResult),
+          type: lockedType ?? scanResult.parsed.type ?? 'cash_out',
+        }
       : mode === 'edit' && transaction
         ? draftFromTransaction(transaction)
-        : emptyDraft();
+        : emptyDraft(lockedType);
 
   const handleSubmit = async (draft: TransactionDraft) => {
     const amount = parseAmountInput(draft.amount);
@@ -131,6 +142,7 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       <TransactionForm
         initial={initial}
+        lockType={Boolean(lockedType)}
         submitLabel={mode === 'edit' ? 'Save changes' : 'Save transaction'}
         onSubmit={handleSubmit}
         onCancel={onCancel}

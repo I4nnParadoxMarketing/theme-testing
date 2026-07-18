@@ -2,13 +2,16 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 import { colors, radii, spacing } from '../theme';
 import type { BalanceSummary } from '../types';
+import type { TodayStats } from '../utils/todayStats';
 import { formatPeso } from '../utils/format';
 
 interface Props {
   summary: BalanceSummary;
+  today: TodayStats;
+  startingBudget: number;
 }
 
-export function BalanceHero({ summary }: Props) {
+export function BalanceHero({ summary, today, startingBudget }: Props) {
   return (
     <LinearGradient
       colors={[colors.oceanDeep, colors.ocean, '#0E7C8A']}
@@ -17,21 +20,35 @@ export function BalanceHero({ summary }: Props) {
       style={styles.hero}
     >
       <Text style={styles.brand}>GCashFlow</Text>
-      <Text style={styles.label}>Net movement</Text>
-      <Text style={styles.net}>{formatPeso(summary.net)}</Text>
+      <Text style={styles.label}>Today’s money</Text>
+      <Text style={styles.net}>{formatPeso(today.remaining)}</Text>
       <Text style={styles.support}>
-        Scan a receipt or add cash in / cash out by hand.
+        Start with your budget, then Cash In adds and Cash Out subtracts as you save transactions.
       </Text>
 
       <View style={styles.row}>
         <View style={styles.stat}>
-          <Text style={styles.statLabel}>Cash in</Text>
-          <Text style={styles.statValue}>{formatPeso(summary.cashIn)}</Text>
+          <Text style={styles.statLabel}>Budget start</Text>
+          <Text style={styles.statValue}>{formatPeso(startingBudget)}</Text>
         </View>
         <View style={styles.divider} />
         <View style={styles.stat}>
-          <Text style={styles.statLabel}>Cash out</Text>
-          <Text style={styles.statValue}>{formatPeso(summary.cashOut)}</Text>
+          <Text style={styles.statLabel}>Today in</Text>
+          <Text style={styles.statValue}>{formatPeso(today.cashIn)}</Text>
+          <Text style={[styles.statLabel, { marginTop: 8 }]}>Today out</Text>
+          <Text style={styles.statValue}>{formatPeso(today.cashOut)}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.row, styles.rowSecond]}>
+        <View style={styles.stat}>
+          <Text style={styles.statLabel}>Fee profit (today)</Text>
+          <Text style={styles.statValue}>{formatPeso(today.fees)}</Text>
+        </View>
+        <View style={styles.divider} />
+        <View style={styles.stat}>
+          <Text style={styles.statLabel}>Fee profit (all)</Text>
+          <Text style={styles.statValue}>{formatPeso(summary.fees)}</Text>
         </View>
       </View>
     </LinearGradient>
@@ -70,7 +87,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: 'rgba(255,255,255,0.84)',
     marginTop: spacing.sm,
-    maxWidth: 280,
+    maxWidth: 300,
   },
   row: {
     flexDirection: 'row',
@@ -78,6 +95,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: 'rgba(255,255,255,0.25)',
+  },
+  rowSecond: {
+    marginTop: spacing.md,
   },
   stat: {
     flex: 1,
@@ -95,7 +115,7 @@ const styles = StyleSheet.create({
   },
   statValue: {
     fontFamily: 'DMSans_700Bold',
-    fontSize: 18,
+    fontSize: 16,
     color: colors.white,
   },
 });

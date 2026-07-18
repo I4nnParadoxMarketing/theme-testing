@@ -6,8 +6,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 ## Features
 
-- Cash in / cash out ledger with net balance
-- **Separate scanners** for Cash In and Cash Out
+- Cash in / cash out ledger with **Today’s money budget** (Cash In adds, Cash Out subtracts)
+- **Fee profit** shown for today and all-time
+- Dedicated **Cash In** and **Cash Out** screens with scan + manual entry inside each
 - Camera / gallery receipt scan with OCR
 - **Completed / Not completed** tags for cash ins
 - Claimed / Unclaimed marker + auto fee rules for cash outs
@@ -20,9 +21,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.1/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.2/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.1
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.2
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted
