@@ -6,10 +6,12 @@ import { formatDateTime, formatPeso, formatType } from '../utils/format';
 interface Props {
   transaction: Transaction;
   onPress: (transaction: Transaction) => void;
+  onToggleClaimed?: (transaction: Transaction) => void;
 }
 
-export function TransactionRow({ transaction, onPress }: Props) {
+export function TransactionRow({ transaction, onPress, onToggleClaimed }: Props) {
   const isIn = transaction.type === 'cash_in';
+  const isClaimed = Boolean(transaction.claimed);
 
   return (
     <Pressable
@@ -23,7 +25,23 @@ export function TransactionRow({ transaction, onPress }: Props) {
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.title}>{formatType(transaction.type)}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{formatType(transaction.type)}</Text>
+          {!isIn ? (
+            <Pressable
+              onPress={(e) => {
+                e.stopPropagation?.();
+                onToggleClaimed?.(transaction);
+              }}
+              hitSlop={8}
+              style={[styles.claimPill, isClaimed ? styles.claimPillOn : styles.claimPillOff]}
+            >
+              <Text style={[styles.claimPillText, isClaimed ? styles.claimOnText : styles.claimOffText]}>
+                {isClaimed ? 'Claimed' : 'Unclaimed'}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
         <Text style={styles.meta} numberOfLines={1}>
           {transaction.counterparty || transaction.reference || 'No reference'}
         </Text>
@@ -77,10 +95,37 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
   title: {
     fontFamily: 'DMSans_700Bold',
     fontSize: 16,
     color: colors.ink,
+  },
+  claimPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: radii.sm,
+  },
+  claimPillOn: {
+    backgroundColor: colors.cashInSoft,
+  },
+  claimPillOff: {
+    backgroundColor: '#F3E7C8',
+  },
+  claimPillText: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 11,
+  },
+  claimOnText: {
+    color: colors.cashIn,
+  },
+  claimOffText: {
+    color: '#8A6A1D',
   },
   meta: {
     fontFamily: 'DMSans_400Regular',

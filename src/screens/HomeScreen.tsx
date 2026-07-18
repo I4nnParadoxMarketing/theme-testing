@@ -25,7 +25,7 @@ interface Props {
 const useNativeDriver = Platform.OS !== 'web';
 
 export function HomeScreen({ onScan, onManual, onOpenTransaction }: Props) {
-  const { transactions, summary, ready } = useTransactions();
+  const { transactions, summary, ready, setClaimed } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
 
@@ -63,7 +63,9 @@ export function HomeScreen({ onScan, onManual, onOpenTransaction }: Props) {
           <View style={styles.sectionHead}>
             <Text style={styles.sectionTitle}>Recent activity</Text>
             <Text style={styles.sectionMeta}>
-              {ready ? `${summary.count} saved` : 'Loading…'}
+              {ready
+                ? `${summary.count} saved · ${summary.unclaimedCount} unclaimed`
+                : 'Loading…'}
             </Text>
           </View>
 
@@ -84,6 +86,11 @@ export function HomeScreen({ onScan, onManual, onOpenTransaction }: Props) {
                   key={item.id}
                   transaction={item}
                   onPress={onOpenTransaction}
+                  onToggleClaimed={(tx) => {
+                    if (tx.type === 'cash_out') {
+                      void setClaimed(tx.id, !tx.claimed);
+                    }
+                  }}
                 />
               ))}
             </View>

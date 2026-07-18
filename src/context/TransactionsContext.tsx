@@ -9,6 +9,7 @@ import React, {
 } from 'react';
 import { loadTransactions, saveTransactions } from '../storage';
 import type { BalanceSummary, Transaction } from '../types';
+import { normalizeReference } from '../utils/fee';
 
 interface TransactionsContextValue {
   transactions: Transaction[];
@@ -18,6 +19,8 @@ interface TransactionsContextValue {
   updateTransaction: (id: string, patch: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
   clearAll: () => Promise<void>;
+  findByReference: (reference: string, excludeId?: string) => Transaction | undefined;
+  setClaimed: (id: string, claimed: boolean) => Promise<void>;
 }
 
 const TransactionsContext = createContext<TransactionsContextValue | null>(null);
@@ -29,13 +32,23 @@ function computeSummary(transactions: Transaction[]): BalanceSummary {
         acc.cashIn += item.amount;
       } else {
         acc.cashOut += item.amount;
+        if (item.claimed) acc.claimedCount += 1;
+        else acc.unclaimedCount += 1;
       }
       acc.fees += item.fee || 0;
       acc.count += 1;
       acc.net = acc.cashIn - acc.cashOut - acc.fees;
       return acc;
     },
-    { cashIn: 0, cashOut: 0, fees: 0, net: 0, count: 0 },
+    {
+      cashIn: 0,
+      cashOut: 0,
+      fees: 0,
+      net: 0,
+      count: 0,
+      claimedCount: 0,
+      unclaimedCount: 0,
+    },
   );
 }
 
@@ -65,8 +78,33 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  const findByReference = useCallback(
+    (reference: string, excludeId?: string) => {
+      const key = normalizeReference(reference);
+      if (!key) return undefined;
+      return transactions.find(
+        (item) =>
+          item.id !== excludeId &&
+          normalizeReference(item.reference) === key,
+      );
+    },
+    [transactions],
+  );
+
   const addTransaction = useCallback(async (transaction: Transaction) => {
     const current = await loadTransactions();
+    const key = normalizeReference(transaction.reference);
+    if (key) {
+      const duplicate = current.find(
+        (item) => normalizeReference(item.reference) === key,
+      );
+      if (duplicate) {
+        throw new Error(
+          `Reference ${transaction.reference?.trim()} is already saved. Duplicate not allowed.`,
+        );
+      }
+    }
+
     const next = sortTransactions([
       transaction,
       ...current.filter((item) => item.id !== transaction.id),
@@ -77,6 +115,21 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
 
   const updateTransaction = useCallback(async (id: string, patch: Partial<Transaction>) => {
     const current = await loadTransactions();
+    if (patch.reference !== undefined) {
+      const key = normalizeReference(patch.reference);
+      if (key) {
+        const duplicate = current.find(
+          (item) =>
+            item.id !== id && normalizeReference(item.reference) === key,
+        );
+        if (duplicate) {
+          throw new Error(
+            `Reference ${String(patch.reference).trim()} is already saved. Duplicate not allowed.`,
+          );
+        }
+      }
+    }
+
     const next = sortTransactions(
       current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
     );
@@ -87,6 +140,17 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   const deleteTransaction = useCallback(async (id: string) => {
     const current = await loadTransactions();
     const next = current.filter((item) => item.id !== id);
+    await saveTransactions(next);
+    setTransactions(next);
+  }, []);
+
+  const setClaimed = useCallback(async (id: string, claimed: boolean) => {
+    const current = await loadTransactions();
+    const next = sortTransactions(
+      current.map((item) =>
+        item.id === id ? { ...item, claimed: item.type === 'cash_out' ? claimed : false } : item,
+      ),
+    );
     await saveTransactions(next);
     setTransactions(next);
   }, []);
@@ -105,6 +169,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       updateTransaction,
       deleteTransaction,
       clearAll,
+      findByReference,
+      setClaimed,
     }),
     [
       transactions,
@@ -113,6 +179,8 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       updateTransaction,
       deleteTransaction,
       clearAll,
+      findByReference,
+      setClaimed,
     ],
   );
 

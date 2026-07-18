@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   Image,
   Pressable,
@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors, radii, spacing } from '../theme';
 import type { Transaction, TransactionSource, TransactionType } from '../types';
+import { calculateCashOutFee, parseAmountInput } from '../utils/fee';
 import { PrimaryButton } from './PrimaryButton';
 
 export interface TransactionDraft {
@@ -21,6 +22,7 @@ export interface TransactionDraft {
   note: string;
   occurredAt: string;
   source: TransactionSource;
+  claimed: boolean;
   rawText?: string;
   imageUri?: string;
 }
@@ -50,9 +52,21 @@ export function draftFromTransaction(transaction: Transaction): TransactionDraft
     note: transaction.note ?? '',
     occurredAt: transaction.occurredAt,
     source: transaction.source,
+    claimed: Boolean(transaction.claimed),
     rawText: transaction.rawText,
     imageUri: transaction.imageUri,
   };
+}
+
+function withAutoFee(draft: TransactionDraft, force = false): TransactionDraft {
+  if (draft.type !== 'cash_out') {
+    return draft;
+  }
+  const amount = parseAmountInput(draft.amount);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return force ? { ...draft, fee: '0' } : draft;
+  }
+  return { ...draft, fee: String(calculateCashOutFee(amount)) };
 }
 
 export function TransactionForm({
@@ -62,25 +76,60 @@ export function TransactionForm({
   onCancel,
   onDelete,
 }: Props) {
-  const [draft, setDraft] = useState<TransactionDraft>(initial);
+  const [draft, setDraft] = useState<TransactionDraft>(() =>
+    withAutoFee(
+      {
+        ...initial,
+        claimed: initial.type === 'cash_out' ? Boolean(initial.claimed) : false,
+      },
+      initial.type === 'cash_out' && (!initial.fee || initial.fee === '0'),
+    ),
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const feeManualRef = useRef(false);
+
+  useEffect(() => {
+    // When opening a cash-out with no useful fee, apply schedule once.
+    if (
+      initial.type === 'cash_out' &&
+      (!initial.fee || initial.fee === '0') &&
+      parseAmountInput(initial.amount) > 0
+    ) {
+      feeManualRef.current = false;
+      setDraft((prev) => withAutoFee(prev, true));
+    }
+  }, [initial.amount, initial.fee, initial.type]);
 
   const update = <K extends keyof TransactionDraft>(key: K, value: TransactionDraft[K]) => {
-    setDraft((prev) => ({ ...prev, [key]: value }));
+    setDraft((prev) => {
+      const next = { ...prev, [key]: value };
+
+      if (key === 'fee') {
+        feeManualRef.current = true;
+        return next;
+      }
+
+      if (key === 'type') {
+        if (value === 'cash_in') {
+          feeManualRef.current = false;
+          return { ...next, claimed: false, fee: prev.fee };
+        }
+        feeManualRef.current = false;
+        return withAutoFee({ ...next, claimed: Boolean(prev.claimed) }, true);
+      }
+
+      if (key === 'amount' && next.type === 'cash_out' && !feeManualRef.current) {
+        return withAutoFee(next, true);
+      }
+
+      return next;
+    });
   };
 
   const handleSubmit = async () => {
-    const amount = Number(
-      String(draft.amount)
-        .replace(/[₱PhpPHP,\s]/gi, '')
-        .trim(),
-    );
-    const fee = Number(
-      String(draft.fee || '0')
-        .replace(/[₱PhpPHP,\s]/gi, '')
-        .trim() || '0',
-    );
+    const amount = parseAmountInput(draft.amount);
+    const fee = parseAmountInput(draft.fee || '0');
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Enter a valid amount greater than zero.');
@@ -98,6 +147,7 @@ export function TransactionForm({
         ...draft,
         amount: String(amount),
         fee: String(fee),
+        claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
         occurredAt: draft.occurredAt || new Date().toISOString(),
       });
     } catch (err) {
@@ -107,6 +157,9 @@ export function TransactionForm({
       setSaving(false);
     }
   };
+
+  const suggestedFee =
+    draft.type === 'cash_out' ? calculateCashOutFee(parseAmountInput(draft.amount) || 0) : null;
 
   return (
     <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
@@ -157,7 +210,41 @@ export function TransactionForm({
           placeholderTextColor={colors.inkSoft}
           style={styles.input}
         />
+        {draft.type === 'cash_out' ? (
+          <View style={styles.feeHelpRow}>
+            <Text style={styles.feeHelp}>
+              Auto: ≤99→₱5 · 100–500→₱10 · 501–1000→₱15 · every ₱1,000→₱15
+            </Text>
+            <Pressable
+              onPress={() => {
+                feeManualRef.current = false;
+                setDraft((prev) => withAutoFee(prev, true));
+              }}
+            >
+              <Text style={styles.feeReset}>Use ₱{suggestedFee ?? 0}</Text>
+            </Pressable>
+          </View>
+        ) : null}
       </Field>
+
+      {draft.type === 'cash_out' ? (
+        <Pressable
+          onPress={() => update('claimed', !draft.claimed)}
+          style={[styles.claimedToggle, draft.claimed && styles.claimedToggleOn]}
+        >
+          <View style={[styles.checkbox, draft.claimed && styles.checkboxOn]}>
+            {draft.claimed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+          </View>
+          <View style={styles.claimedCopy}>
+            <Text style={styles.claimedTitle}>
+              {draft.claimed ? 'Claimed' : 'Not claimed'}
+            </Text>
+            <Text style={styles.claimedBody}>
+              Mark when this cash out has already been claimed.
+            </Text>
+          </View>
+        </Pressable>
+      ) : null}
 
       <Field label="Reference">
         <TextInput
@@ -166,6 +253,7 @@ export function TransactionForm({
           placeholder="Ref No."
           placeholderTextColor={colors.inkSoft}
           style={styles.input}
+          autoCapitalize="characters"
         />
       </Field>
 
@@ -328,6 +416,71 @@ const styles = StyleSheet.create({
     fontFamily: 'DMSans_400Regular',
     fontSize: 16,
     color: colors.ink,
+  },
+  feeHelpRow: {
+    marginTop: spacing.xs,
+    gap: 4,
+  },
+  feeHelp: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 12,
+    color: colors.inkSoft,
+    lineHeight: 17,
+  },
+  feeReset: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 13,
+    color: colors.ocean,
+    marginTop: 2,
+  },
+  claimedToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    padding: spacing.md,
+    borderRadius: radii.md,
+    backgroundColor: colors.mist,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  claimedToggleOn: {
+    backgroundColor: colors.cashInSoft,
+    borderColor: 'rgba(15, 138, 95, 0.35)',
+  },
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: colors.inkSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  checkboxOn: {
+    borderColor: colors.cashIn,
+    backgroundColor: colors.cashIn,
+  },
+  checkboxMark: {
+    color: colors.white,
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    lineHeight: 18,
+  },
+  claimedCopy: {
+    flex: 1,
+  },
+  claimedTitle: {
+    fontFamily: 'DMSans_700Bold',
+    fontSize: 16,
+    color: colors.ink,
+  },
+  claimedBody: {
+    fontFamily: 'DMSans_400Regular',
+    fontSize: 13,
+    color: colors.inkSoft,
+    marginTop: 2,
   },
   multiline: {
     minHeight: 88,

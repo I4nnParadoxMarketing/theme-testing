@@ -17,7 +17,7 @@ Jul 15, 2026 6:37 PM
 export const SAMPLE_EXPRESS_SEND_PARSED: ParsedReceipt = {
   type: 'cash_out',
   amount: 200,
-  fee: 0,
+  fee: 10,
   reference: '0042 920 599051',
   counterparty: 'HA•••E U. · +63 999 987 3253',
   occurredAt: new Date('2026-07-15T18:37:00').toISOString(),

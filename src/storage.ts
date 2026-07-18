@@ -27,13 +27,19 @@ export async function loadTransactions(): Promise<Transaction[]> {
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Transaction[];
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item) =>
-        item &&
-        typeof item.id === 'string' &&
-        (item.type === 'cash_in' || item.type === 'cash_out') &&
-        typeof item.amount === 'number',
-    );
+    return parsed
+      .filter(
+        (item) =>
+          item &&
+          typeof item.id === 'string' &&
+          (item.type === 'cash_in' || item.type === 'cash_out') &&
+          typeof item.amount === 'number',
+      )
+      .map((item) => ({
+        ...item,
+        fee: typeof item.fee === 'number' ? item.fee : 0,
+        claimed: item.type === 'cash_out' ? Boolean(item.claimed) : false,
+      }));
   } catch (error) {
     console.warn('Failed to load transactions', error);
     return [];

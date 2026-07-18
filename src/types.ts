@@ -13,6 +13,8 @@ export interface Transaction {
   occurredAt: string;
   createdAt: string;
   source: TransactionSource;
+  /** Cash-out only: whether the payout has been claimed. */
+  claimed?: boolean;
   rawText?: string;
   imageUri?: string;
 }
@@ -34,4 +36,6 @@ export interface BalanceSummary {
   fees: number;
   net: number;
   count: number;
+  claimedCount: number;
+  unclaimedCount: number;
 }

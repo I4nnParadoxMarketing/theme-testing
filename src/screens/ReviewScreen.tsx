@@ -9,6 +9,7 @@ import { useTransactions } from '../context/TransactionsContext';
 import type { ScanResult } from './ScanScreen';
 import type { Transaction } from '../types';
 import { colors } from '../theme';
+import { calculateCashOutFee, normalizeReference, parseAmountInput } from '../utils/fee';
 import { createId } from '../utils/id';
 
 interface Props {
@@ -20,15 +21,21 @@ interface Props {
 }
 
 function draftFromScan(scan: ScanResult): TransactionDraft {
+  const type = scan.parsed.type ?? 'cash_out';
+  const amount = scan.parsed.amount != null ? String(scan.parsed.amount) : '';
+  const amountNum = scan.parsed.amount ?? 0;
+  const autoFee = type === 'cash_out' ? calculateCashOutFee(amountNum) : scan.parsed.fee ?? 0;
+
   return {
-    type: scan.parsed.type ?? 'cash_out',
-    amount: scan.parsed.amount != null ? String(scan.parsed.amount) : '',
-    fee: scan.parsed.fee != null ? String(scan.parsed.fee) : '0',
+    type,
+    amount,
+    fee: String(autoFee),
     reference: scan.parsed.reference ?? '',
     counterparty: scan.parsed.counterparty ?? '',
     note: '',
     occurredAt: scan.parsed.occurredAt ?? new Date().toISOString(),
     source: scan.source,
+    claimed: false,
     rawText: scan.parsed.rawText,
     imageUri: scan.imageUri || undefined,
   };
@@ -44,11 +51,13 @@ function emptyDraft(): TransactionDraft {
     note: '',
     occurredAt: new Date().toISOString(),
     source: 'manual',
+    claimed: false,
   };
 }
 
 export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }: Props) {
-  const { addTransaction, updateTransaction, deleteTransaction } = useTransactions();
+  const { addTransaction, updateTransaction, deleteTransaction, findByReference } =
+    useTransactions();
 
   const initial =
     mode === 'from-scan' && scanResult
@@ -58,12 +67,25 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
         : emptyDraft();
 
   const handleSubmit = async (draft: TransactionDraft) => {
-    const amount = Number(draft.amount);
-    const fee = Number(draft.fee || 0);
+    const amount = parseAmountInput(draft.amount);
+    const fee = parseAmountInput(draft.fee || '0');
     const occurredAt = draft.occurredAt || new Date().toISOString();
+    const reference = draft.reference.trim();
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error('Enter a valid amount greater than zero.');
+    }
+
+    if (normalizeReference(reference)) {
+      const duplicate = findByReference(
+        reference,
+        mode === 'edit' && transaction ? transaction.id : undefined,
+      );
+      if (duplicate) {
+        throw new Error(
+          `Reference ${reference} is already saved. Duplicate not allowed.`,
+        );
+      }
     }
 
     if (mode === 'edit' && transaction) {
@@ -71,10 +93,11 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
         type: draft.type,
         amount,
         fee: Number.isFinite(fee) ? fee : 0,
-        reference: draft.reference.trim() || undefined,
+        reference: reference || undefined,
         counterparty: draft.counterparty.trim() || undefined,
         note: draft.note.trim() || undefined,
         occurredAt,
+        claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       });
@@ -84,12 +107,13 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
         type: draft.type,
         amount,
         fee: Number.isFinite(fee) ? fee : 0,
-        reference: draft.reference.trim() || undefined,
+        reference: reference || undefined,
         counterparty: draft.counterparty.trim() || undefined,
         note: draft.note.trim() || undefined,
         occurredAt,
         createdAt: new Date().toISOString(),
         source: draft.source || 'manual',
+        claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       };
