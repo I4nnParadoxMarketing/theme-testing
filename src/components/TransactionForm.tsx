@@ -295,53 +295,40 @@ export function TransactionForm({
         </Pressable>
       ) : null}
 
-      <Field label="Reference">
-        <TextInput
-          value={draft.reference}
-          onChangeText={(v) => update('reference', v)}
-          placeholder="Ref No."
-          placeholderTextColor={colors.inkSoft}
-          style={styles.input}
-          autoCapitalize="characters"
-        />
-        {draft.type === 'cash_in' && canMarkCompleted ? (
-          <Text style={styles.feeHelp}>Required to mark this cash in as completed.</Text>
-        ) : null}
-      </Field>
+      {/* Staff cash-in: hide reference + completed (admin fills those later). */}
+      {draft.type !== 'cash_in' || canMarkCompleted ? (
+        <Field label="Reference">
+          <TextInput
+            value={draft.reference}
+            onChangeText={(v) => update('reference', v)}
+            placeholder="Ref No."
+            placeholderTextColor={colors.inkSoft}
+            style={styles.input}
+            autoCapitalize="characters"
+          />
+          {draft.type === 'cash_in' && canMarkCompleted ? (
+            <Text style={styles.feeHelp}>Required to mark this cash in as completed.</Text>
+          ) : null}
+        </Field>
+      ) : null}
 
-      {draft.type === 'cash_in' ? (
-        canMarkCompleted ? (
-          <Pressable
-            onPress={() => update('completed', !draft.completed)}
-            style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}
-          >
-            <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
-              {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-            </View>
-            <View style={styles.claimedCopy}>
-              <Text style={styles.claimedTitle}>
-                {draft.completed ? 'Completed' : 'Not completed'}
-              </Text>
-              <Text style={styles.claimedBody}>
-                Admin only. Enter a reference first, then mark completed.
-              </Text>
-            </View>
-          </Pressable>
-        ) : (
-          <View style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}>
-            <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
-              {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-            </View>
-            <View style={styles.claimedCopy}>
-              <Text style={styles.claimedTitle}>
-                {draft.completed ? 'Completed' : 'Not completed'}
-              </Text>
-              <Text style={styles.claimedBody}>
-                Staff can add cash in only. Admin marks it completed with a reference.
-              </Text>
-            </View>
+      {draft.type === 'cash_in' && canMarkCompleted ? (
+        <Pressable
+          onPress={() => update('completed', !draft.completed)}
+          style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}
+        >
+          <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
+            {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
           </View>
-        )
+          <View style={styles.claimedCopy}>
+            <Text style={styles.claimedTitle}>
+              {draft.completed ? 'Completed' : 'Not completed'}
+            </Text>
+            <Text style={styles.claimedBody}>
+              Enter a reference first, then mark completed.
+            </Text>
+          </View>
+        </Pressable>
       ) : null}
 
       <Field label="From / To">
