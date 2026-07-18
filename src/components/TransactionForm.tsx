@@ -213,7 +213,7 @@ export function TransactionForm({
         {draft.type === 'cash_out' ? (
           <View style={styles.feeHelpRow}>
             <Text style={styles.feeHelp}>
-              Auto: ≤99→₱5 · 100–500→₱10 · 501–1000→₱15 · every ₱1,000→₱15
+              Auto: ≤99→₱5 · 100–500→₱10 · 501–1000→₱15 · each ₱1,000→₱15 + same brackets on excess
             </Text>
             <Pressable
               onPress={() => {
