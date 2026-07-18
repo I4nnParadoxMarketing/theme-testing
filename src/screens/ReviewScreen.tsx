@@ -5,10 +5,12 @@ import {
   type TransactionDraft,
   draftFromTransaction,
 } from '../components/TransactionForm';
+import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import type { ScanResult } from './ScanScreen';
 import type { Transaction } from '../types';
 import { colors } from '../theme';
+import { assertCanMarkCashInCompleted } from '../utils/cashInComplete';
 import { calculateCashOutFee, normalizeReference, parseAmountInput } from '../utils/fee';
 import { createId } from '../utils/id';
 
@@ -66,6 +68,7 @@ export function ReviewScreen({
   onDone,
   onCancel,
 }: Props) {
+  const { isAdmin, session } = useAuth();
   const { addTransaction, updateTransaction, deleteTransaction, findByReference } =
     useTransactions();
 
@@ -74,6 +77,7 @@ export function ReviewScreen({
       ? {
           ...draftFromScan(scanResult),
           type: lockedType ?? scanResult.parsed.type ?? 'cash_out',
+          completed: false,
         }
       : mode === 'edit' && transaction
         ? draftFromTransaction(transaction)
@@ -84,10 +88,25 @@ export function ReviewScreen({
     const fee = parseAmountInput(draft.fee || '0');
     const occurredAt = draft.occurredAt || new Date().toISOString();
     const reference = draft.reference.trim();
+    // Staff may add/edit cash in but cannot set completed; keep existing flag on edit.
+    const completed =
+      draft.type !== 'cash_in'
+        ? false
+        : isAdmin
+          ? Boolean(draft.completed)
+          : mode === 'edit'
+            ? Boolean(transaction?.completed)
+            : false;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new Error('Enter a valid amount greater than zero.');
     }
+
+    assertCanMarkCashInCompleted({
+      role: session?.role,
+      reference,
+      completed,
+    });
 
     if (normalizeReference(reference)) {
       const duplicate = findByReference(
@@ -111,7 +130,7 @@ export function ReviewScreen({
         note: draft.note.trim() || undefined,
         occurredAt,
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
-        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
+        completed,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       });
@@ -128,7 +147,7 @@ export function ReviewScreen({
         createdAt: new Date().toISOString(),
         source: draft.source || 'manual',
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
-        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
+        completed,
         rawText: draft.rawText,
         imageUri: draft.imageUri || undefined,
       };
@@ -143,6 +162,7 @@ export function ReviewScreen({
       <TransactionForm
         initial={initial}
         lockType={Boolean(lockedType)}
+        canMarkCompleted={isAdmin}
         submitLabel={mode === 'edit' ? 'Save changes' : 'Save transaction'}
         onSubmit={handleSubmit}
         onCancel={onCancel}

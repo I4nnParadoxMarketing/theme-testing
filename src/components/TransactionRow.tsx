@@ -8,6 +8,8 @@ interface Props {
   onPress: (transaction: Transaction) => void;
   onToggleClaimed?: (transaction: Transaction) => void;
   onToggleCompleted?: (transaction: Transaction) => void;
+  /** When false, completed pill is display-only (staff). */
+  canToggleCompleted?: boolean;
 }
 
 export function TransactionRow({
@@ -15,6 +17,7 @@ export function TransactionRow({
   onPress,
   onToggleClaimed,
   onToggleCompleted,
+  canToggleCompleted = false,
 }: Props) {
   const isIn = transaction.type === 'cash_in';
   const isClaimed = Boolean(transaction.claimed);
@@ -38,9 +41,10 @@ export function TransactionRow({
             <Pressable
               onPress={(e) => {
                 e.stopPropagation?.();
-                onToggleCompleted?.(transaction);
+                if (canToggleCompleted) onToggleCompleted?.(transaction);
               }}
               hitSlop={8}
+              disabled={!canToggleCompleted}
               style={[styles.claimPill, isCompleted ? styles.claimPillOn : styles.claimPillOff]}
             >
               <Text

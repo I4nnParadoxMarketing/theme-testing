@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors, radii, spacing } from '../theme';
 import type { Transaction, TransactionSource, TransactionType } from '../types';
+import { assertCanMarkCashInCompleted } from '../utils/cashInComplete';
 import { calculateCashOutFee, parseAmountInput } from '../utils/fee';
 import { PrimaryButton } from './PrimaryButton';
 
@@ -32,6 +33,8 @@ interface Props {
   initial: TransactionDraft;
   /** When true, hide the Cash In / Cash Out type switcher. */
   lockType?: boolean;
+  /** Staff cannot mark cash in completed. Admin can when reference is set. */
+  canMarkCompleted?: boolean;
   submitLabel: string;
   onSubmit: (draft: TransactionDraft) => void | Promise<void>;
   onCancel: () => void;
@@ -76,6 +79,7 @@ function withAutoFee(draft: TransactionDraft, force = false): TransactionDraft {
 export function TransactionForm({
   initial,
   lockType = false,
+  canMarkCompleted = false,
   submitLabel,
   onSubmit,
   onCancel,
@@ -144,6 +148,9 @@ export function TransactionForm({
   const handleSubmit = async () => {
     const amount = parseAmountInput(draft.amount);
     const fee = parseAmountInput(draft.fee || '0');
+    // Staff never changes completed here; ReviewScreen preserves existing value.
+    const completed =
+      draft.type === 'cash_in' && canMarkCompleted ? Boolean(draft.completed) : false;
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Enter a valid amount greater than zero.');
@@ -154,6 +161,19 @@ export function TransactionForm({
       return;
     }
 
+    if (canMarkCompleted) {
+      try {
+        assertCanMarkCashInCompleted({
+          role: 'admin',
+          reference: draft.reference,
+          completed,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Cannot mark completed.');
+        return;
+      }
+    }
+
     setError(null);
     setSaving(true);
     try {
@@ -162,7 +182,7 @@ export function TransactionForm({
         amount: String(amount),
         fee: String(fee),
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
-        completed: draft.type === 'cash_in' ? Boolean(draft.completed) : false,
+        completed,
         occurredAt: draft.occurredAt || new Date().toISOString(),
       });
     } catch (err) {
@@ -275,25 +295,6 @@ export function TransactionForm({
         </Pressable>
       ) : null}
 
-      {draft.type === 'cash_in' ? (
-        <Pressable
-          onPress={() => update('completed', !draft.completed)}
-          style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}
-        >
-          <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
-            {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
-          </View>
-          <View style={styles.claimedCopy}>
-            <Text style={styles.claimedTitle}>
-              {draft.completed ? 'Completed' : 'Not completed'}
-            </Text>
-            <Text style={styles.claimedBody}>
-              Mark when this cash in is fully completed.
-            </Text>
-          </View>
-        </Pressable>
-      ) : null}
-
       <Field label="Reference">
         <TextInput
           value={draft.reference}
@@ -303,7 +304,45 @@ export function TransactionForm({
           style={styles.input}
           autoCapitalize="characters"
         />
+        {draft.type === 'cash_in' && canMarkCompleted ? (
+          <Text style={styles.feeHelp}>Required to mark this cash in as completed.</Text>
+        ) : null}
       </Field>
+
+      {draft.type === 'cash_in' ? (
+        canMarkCompleted ? (
+          <Pressable
+            onPress={() => update('completed', !draft.completed)}
+            style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}
+          >
+            <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
+              {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+            </View>
+            <View style={styles.claimedCopy}>
+              <Text style={styles.claimedTitle}>
+                {draft.completed ? 'Completed' : 'Not completed'}
+              </Text>
+              <Text style={styles.claimedBody}>
+                Admin only. Enter a reference first, then mark completed.
+              </Text>
+            </View>
+          </Pressable>
+        ) : (
+          <View style={[styles.claimedToggle, draft.completed && styles.claimedToggleOn]}>
+            <View style={[styles.checkbox, draft.completed && styles.checkboxOn]}>
+              {draft.completed ? <Text style={styles.checkboxMark}>✓</Text> : null}
+            </View>
+            <View style={styles.claimedCopy}>
+              <Text style={styles.claimedTitle}>
+                {draft.completed ? 'Completed' : 'Not completed'}
+              </Text>
+              <Text style={styles.claimedBody}>
+                Staff can add cash in only. Admin marks it completed with a reference.
+              </Text>
+            </View>
+          </View>
+        )
+      ) : null}
 
       <Field label="From / To">
         <TextInput

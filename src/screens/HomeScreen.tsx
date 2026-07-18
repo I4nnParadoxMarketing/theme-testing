@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import {
+  Alert,
   Animated,
   Platform,
   Pressable,
@@ -13,6 +14,7 @@ import { loadDailyBudget } from '../budget';
 import { BalanceHero } from '../components/BalanceHero';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TransactionRow } from '../components/TransactionRow';
+import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, radii, spacing } from '../theme';
 import type { Transaction } from '../types';
@@ -34,6 +36,7 @@ export function HomeScreen({
   onOpenTransaction,
   onOpenSettings,
 }: Props) {
+  const { isAdmin } = useAuth();
   const { transactions, summary, ready, setClaimed, setCompleted } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
@@ -114,14 +117,22 @@ export function HomeScreen({
                   key={item.id}
                   transaction={item}
                   onPress={onOpenTransaction}
+                  canToggleCompleted={isAdmin}
                   onToggleClaimed={(tx) => {
                     if (tx.type === 'cash_out') {
                       void setClaimed(tx.id, !tx.claimed);
                     }
                   }}
                   onToggleCompleted={(tx) => {
-                    if (tx.type === 'cash_in') {
-                      void setCompleted(tx.id, !tx.completed);
+                    if (tx.type === 'cash_in' && isAdmin) {
+                      void setCompleted(tx.id, !tx.completed).catch((err) => {
+                        Alert.alert(
+                          'Cannot update',
+                          err instanceof Error
+                            ? err.message
+                            : 'Reference is required to mark completed.',
+                        );
+                      });
                     }
                   }}
                 />

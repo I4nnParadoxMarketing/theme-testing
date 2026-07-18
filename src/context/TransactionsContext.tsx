@@ -7,6 +7,7 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
+import { loadSession } from '../auth/sessionStore';
 import { loadTransactions, saveTransactions } from '../storage';
 import {
   applyRemoteUsers,
@@ -17,6 +18,7 @@ import {
 import { loadSyncMeta, saveSyncMeta } from '../sync/syncMeta';
 import type { SyncMeta } from '../sync/types';
 import type { BalanceSummary, Transaction } from '../types';
+import { assertCanMarkCashInCompleted } from '../utils/cashInComplete';
 import { normalizeReference } from '../utils/fee';
 
 interface TransactionsContextValue {
@@ -214,12 +216,19 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
   }, [persistLocal, syncPush]);
 
   const setCompleted = useCallback(async (id: string, completed: boolean) => {
-    const current = await loadTransactions();
+    const [current, session] = await Promise.all([loadTransactions(), loadSession()]);
+    const target = current.find((item) => item.id === id);
+    if (!target || target.type !== 'cash_in') return;
+
+    assertCanMarkCashInCompleted({
+      role: session?.role,
+      reference: target.reference,
+      completed,
+    });
+
     const next = await persistLocal(
       current.map((item) =>
-        item.id === id
-          ? { ...item, completed: item.type === 'cash_in' ? completed : false }
-          : item,
+        item.id === id ? { ...item, completed: Boolean(completed) } : item,
       ),
     );
     const meta = await syncPush(next);

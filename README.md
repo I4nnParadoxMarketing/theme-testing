@@ -23,9 +23,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.2.0/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.2.1/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.2.0
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.2.1
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted
@@ -37,8 +37,8 @@ Package id: `com.gcashflow.tracker`
 
 | Username | Default password | Role |
 |---|---|---|
-| `admin` | `1234` | Manage staff, all features |
-| `staff` | `1234` | Day-to-day cash tracking |
+| `admin` | `1234` | Manage staff; can mark cash in **Completed** (reference required) |
+| `staff` | `1234` | Add cash in / cash out; cannot mark cash in completed |
 
 Change passwords in **Settings → Account**. Admin can add more staff there. When **Cloud sync** is on, accounts are shared online with other phones on the same sync code.
 

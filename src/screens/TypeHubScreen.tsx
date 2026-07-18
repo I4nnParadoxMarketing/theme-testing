@@ -1,8 +1,9 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { TransactionRow } from '../components/TransactionRow';
+import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, radii, spacing } from '../theme';
 import type { Transaction, TransactionType } from '../types';
@@ -23,6 +24,7 @@ export function TypeHubScreen({
   onManual,
   onOpenTransaction,
 }: Props) {
+  const { isAdmin } = useAuth();
   const { transactions, ready, setClaimed, setCompleted } = useTransactions();
   const isIn = type === 'cash_in';
   const filtered = transactions.filter((tx) => tx.type === type);
@@ -96,11 +98,21 @@ export function TypeHubScreen({
                   key={item.id}
                   transaction={item}
                   onPress={onOpenTransaction}
+                  canToggleCompleted={isAdmin}
                   onToggleClaimed={(tx) => {
                     if (tx.type === 'cash_out') void setClaimed(tx.id, !tx.claimed);
                   }}
                   onToggleCompleted={(tx) => {
-                    if (tx.type === 'cash_in') void setCompleted(tx.id, !tx.completed);
+                    if (tx.type === 'cash_in' && isAdmin) {
+                      void setCompleted(tx.id, !tx.completed).catch((err) => {
+                        Alert.alert(
+                          'Cannot update',
+                          err instanceof Error
+                            ? err.message
+                            : 'Reference is required to mark completed.',
+                        );
+                      });
+                    }
                   }}
                 />
               ))}
