@@ -1,3 +1,4 @@
+import type { AppUser } from '../auth/types';
 import type { Transaction } from '../types';
 
 export type SyncProvider = 'pantry' | 'jsonblob' | 'github';
@@ -14,8 +15,10 @@ export interface SyncMeta {
 }
 
 export interface CloudRoomPayload {
-  version: 1;
+  version: 1 | 2;
   syncCode: string;
   updatedAt: string;
   transactions: Transaction[];
+  /** Synced accounts (admin/staff). Present from version 2. */
+  users?: AppUser[];
 }

@@ -8,7 +8,12 @@ import React, {
   type ReactNode,
 } from 'react';
 import { loadTransactions, saveTransactions } from '../storage';
-import { mergeTransactions, pullTransactions, pushTransactions } from '../sync/cloudSync';
+import {
+  applyRemoteUsers,
+  mergeTransactions,
+  pullTransactions,
+  pushTransactions,
+} from '../sync/cloudSync';
 import { loadSyncMeta, saveSyncMeta } from '../sync/syncMeta';
 import type { SyncMeta } from '../sync/types';
 import type { BalanceSummary, Transaction } from '../types';
@@ -112,6 +117,9 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
         try {
           const pulled = await pullTransactions(meta);
           nextMeta = pulled.meta;
+          if (pulled.users) {
+            await applyRemoteUsers(pulled.users);
+          }
           if (pulled.transactions) {
             next = sortTransactions(mergeTransactions(stored, pulled.transactions));
             await saveTransactions(next);
@@ -236,6 +244,9 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       const meta = await loadSyncMeta();
       const pulled = await pullTransactions(meta);
       setSyncMeta(pulled.meta);
+      if (pulled.users) {
+        await applyRemoteUsers(pulled.users);
+      }
       if (pulled.transactions) {
         const local = await loadTransactions();
         const merged = sortTransactions(mergeTransactions(local, pulled.transactions));

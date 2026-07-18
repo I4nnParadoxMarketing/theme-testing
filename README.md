@@ -6,8 +6,11 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 ## Features
 
+- **Login** for admin and staff (default passwords `1234` / `1234`)
+- **Account settings**: change password; admin can add / update / deactivate staff
+- Accounts sync **online** with Cloud sync
 - Clean dashboard: today’s money, Cash In / Cash Out, recent activity
-- **Settings**: today’s budget, reports, and cloud sync
+- **Settings**: today’s budget, account, reports, and cloud sync
 - **Fee profit** shown for today and all-time
 - Dedicated **Cash In** and **Cash Out** screens with scan + manual entry inside each
 - Camera / gallery receipt scan with OCR
@@ -20,9 +23,9 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.3/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.2.0/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.3
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.2.0
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted
@@ -30,10 +33,20 @@ Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag
 
 Package id: `com.gcashflow.tracker`
 
+## Login
+
+| Username | Default password | Role |
+|---|---|---|
+| `admin` | `1234` | Manage staff, all features |
+| `staff` | `1234` | Day-to-day cash tracking |
+
+Change passwords in **Settings → Account**. Admin can add more staff there. When **Cloud sync** is on, accounts are shared online with other phones on the same sync code.
+
 ## Settings
 
 Open **Settings** from the dashboard for:
 
+- Account (password + staff management)
 - Today’s money budget
 - Reports (CSV download)
 - Cloud sync

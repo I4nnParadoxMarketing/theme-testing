@@ -178,14 +178,16 @@ export function SyncScreen({ onBack }: Props) {
           style={styles.gap}
           onPress={() =>
             run(async () => {
-              const { meta, transactions: remote } = await joinSyncRoom(joinCode, {
+              const { meta, transactions: remote, users } = await joinSyncRoom(joinCode, {
                 provider,
                 pantryId,
                 githubToken,
               });
               await replaceAll(remote);
               await setSyncMetaState(meta);
-              setStatus(`Joined ${meta.syncCode}. Loaded ${remote.length} transactions.`);
+              setStatus(
+                `Joined ${meta.syncCode}. Loaded ${remote.length} transactions and ${users.length} accounts.`,
+              );
             })
           }
         />

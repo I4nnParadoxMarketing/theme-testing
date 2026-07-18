@@ -1,3 +1,5 @@
+import type { AppUser } from '../auth/types';
+import { loadUsers, mergeUsers, saveUsers } from '../auth/userStore';
 import type { Transaction } from '../types';
 import {
   GITHUB_API_BASE,
@@ -17,12 +19,17 @@ function sanitizeTransactions(transactions: Transaction[]): Transaction[] {
   }));
 }
 
-function buildPayload(syncCode: string, transactions: Transaction[]): CloudRoomPayload {
+function buildPayload(
+  syncCode: string,
+  transactions: Transaction[],
+  users: AppUser[],
+): CloudRoomPayload {
   return {
-    version: 1,
+    version: 2,
     syncCode,
     updatedAt: new Date().toISOString(),
     transactions: sanitizeTransactions(transactions),
+    users,
   };
 }
 
@@ -147,11 +154,16 @@ async function pullGitHub(syncCode: string): Promise<CloudRoomPayload | null> {
   return (await res.json()) as CloudRoomPayload;
 }
 
-export async function pushTransactions(transactions: Transaction[], meta?: SyncMeta): Promise<SyncMeta> {
+export async function pushTransactions(
+  transactions: Transaction[],
+  meta?: SyncMeta,
+  users?: AppUser[],
+): Promise<SyncMeta> {
   const current = meta ?? (await loadSyncMeta());
   if (!current.enabled || !current.syncCode) return current;
 
-  const payload = buildPayload(current.syncCode, transactions);
+  const accountUsers = users ?? (await loadUsers());
+  const payload = buildPayload(current.syncCode, transactions, accountUsers);
   let next = { ...current, lastError: undefined as string | undefined };
 
   try {
@@ -179,10 +191,11 @@ export async function pushTransactions(transactions: Transaction[], meta?: SyncM
 export async function pullTransactions(meta?: SyncMeta): Promise<{
   meta: SyncMeta;
   transactions: Transaction[] | null;
+  users: AppUser[] | null;
 }> {
   const current = meta ?? (await loadSyncMeta());
   if (!current.enabled || !current.syncCode) {
-    return { meta: current, transactions: null };
+    return { meta: current, transactions: null, users: null };
   }
 
   try {
@@ -205,6 +218,7 @@ export async function pullTransactions(meta?: SyncMeta): Promise<{
     return {
       meta: next,
       transactions: payload?.transactions ?? null,
+      users: payload?.users ?? null,
     };
   } catch (error) {
     const next = {
@@ -216,10 +230,20 @@ export async function pullTransactions(meta?: SyncMeta): Promise<{
   }
 }
 
+/** Apply remote users into local storage and return the merged list. */
+export async function applyRemoteUsers(remoteUsers: AppUser[] | null | undefined): Promise<AppUser[]> {
+  const local = await loadUsers();
+  if (!remoteUsers || remoteUsers.length === 0) return local;
+  const merged = mergeUsers(local, remoteUsers);
+  return saveUsers(merged);
+}
+
 export async function createSyncRoom(
   transactions: Transaction[],
   options: { provider: SyncMeta['provider']; pantryId?: string; githubToken?: string },
+  users?: AppUser[],
 ): Promise<SyncMeta> {
+  const accountUsers = users ?? (await loadUsers());
   const code = options.provider === 'jsonblob' ? 'pending' : createSyncCode(6);
   let meta: SyncMeta = {
     enabled: true,
@@ -229,16 +253,24 @@ export async function createSyncRoom(
     githubToken: options.githubToken?.trim() || undefined,
   };
 
-  const payload = buildPayload(code === 'pending' ? 'NEW' : code, transactions);
+  const payload = buildPayload(code === 'pending' ? 'NEW' : code, transactions, accountUsers);
 
   if (options.provider === 'pantry') {
     if (!meta.pantryId) throw new Error('Pantry ID is required for permanent sync.');
     meta.syncCode = createSyncCode(6);
-    await pushPantry(meta.pantryId, meta.syncCode, buildPayload(meta.syncCode, transactions));
+    await pushPantry(
+      meta.pantryId,
+      meta.syncCode,
+      buildPayload(meta.syncCode, transactions, accountUsers),
+    );
   } else if (options.provider === 'github') {
     if (!meta.githubToken) throw new Error('GitHub token is required for GitHub sync.');
     meta.syncCode = createSyncCode(6);
-    await pushGitHub(meta.githubToken, meta.syncCode, buildPayload(meta.syncCode, transactions));
+    await pushGitHub(
+      meta.githubToken,
+      meta.syncCode,
+      buildPayload(meta.syncCode, transactions, accountUsers),
+    );
   } else {
     const blobId = await pushJsonBlob('', payload);
     meta = { ...meta, syncCode: blobId, provider: 'jsonblob' };
@@ -252,7 +284,7 @@ export async function createSyncRoom(
 export async function joinSyncRoom(
   syncCode: string,
   options: { provider: SyncMeta['provider']; pantryId?: string; githubToken?: string },
-): Promise<{ meta: SyncMeta; transactions: Transaction[] }> {
+): Promise<{ meta: SyncMeta; transactions: Transaction[]; users: AppUser[] }> {
   const code = syncCode.trim();
   if (!code) throw new Error('Enter a sync code.');
 
@@ -264,14 +296,15 @@ export async function joinSyncRoom(
     githubToken: options.githubToken?.trim() || undefined,
   };
 
-  const { transactions } = await pullTransactions(meta);
-  if (!transactions) {
+  const pulled = await pullTransactions(meta);
+  if (!pulled.transactions) {
     throw new Error('No cloud room found for that sync code.');
   }
 
+  const users = await applyRemoteUsers(pulled.users);
   const saved = { ...meta, lastSyncedAt: new Date().toISOString() };
   await saveSyncMeta(saved);
-  return { meta: saved, transactions };
+  return { meta: saved, transactions: pulled.transactions, users };
 }
 
 export function mergeTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {

@@ -10,6 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadDailyBudget, saveDailyBudget, todayLocalDate } from '../budget';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
 import { colors, radii, spacing } from '../theme';
 import { parseAmountInput } from '../utils/fee';
@@ -20,9 +21,11 @@ interface Props {
   onBack: () => void;
   onOpenSync: () => void;
   onOpenReports: () => void;
+  onOpenAccount: () => void;
 }
 
-export function SettingsScreen({ onBack, onOpenSync, onOpenReports }: Props) {
+export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccount }: Props) {
+  const { currentUser, isAdmin } = useAuth();
   const { transactions, syncMeta, syncing, summary } = useTransactions();
   const [budgetInput, setBudgetInput] = useState('');
   const [startingBudget, setStartingBudget] = useState(0);
@@ -68,8 +71,18 @@ export function SettingsScreen({ onBack, onOpenSync, onOpenReports }: Props) {
 
         <Text style={styles.brand}>Settings</Text>
         <Text style={styles.support}>
-          Budget, reports, and cloud sync live here so the dashboard stays focused on cash moves.
+          Signed in as {currentUser?.displayName || currentUser?.username} (
+          {currentUser?.role}). Budget, account, reports, and cloud sync live here.
         </Text>
+
+        <Pressable onPress={onOpenAccount} style={styles.linkCard}>
+          <Text style={styles.linkTitle}>Account</Text>
+          <Text style={styles.linkBody}>
+            Change password
+            {isAdmin ? ', add or update staff accounts' : ''}. Accounts sync online with Cloud sync.
+          </Text>
+          <Text style={styles.linkAction}>Open account →</Text>
+        </Pressable>
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Today’s money budget</Text>
