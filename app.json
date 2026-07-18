@@ -1,0 +1,59 @@
+{
+  "expo": {
+    "name": "GCashFlow",
+    "slug": "gcash-tracker",
+    "version": "1.3.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#043B5C"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "GCashFlow uses the camera to photograph GCash cash in and cash out receipts.",
+        "NSPhotoLibraryUsageDescription": "GCashFlow uses your photos to read GCash receipt screenshots."
+      },
+      "bundleIdentifier": "com.gcashflow.tracker"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#043B5C",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_MEDIA_IMAGES"
+      ],
+      "package": "com.gcashflow.tracker",
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow GCashFlow to access photos of GCash receipts.",
+          "cameraPermission": "Allow GCashFlow to photograph GCash receipts."
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow GCashFlow to photograph GCash receipts.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-sharing"
+    ]
+  }
+}
