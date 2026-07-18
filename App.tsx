@@ -5,7 +5,7 @@ import {
 } from '@expo-google-fonts/dm-sans';
 import { Fraunces_700Bold, useFonts } from '@expo-google-fonts/fraunces';
 import { StatusBar } from 'expo-status-bar';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -49,6 +49,11 @@ function AppShell() {
   const { ready: authReady, session } = useAuth();
   const [screen, setScreen] = useState<Screen>({ name: 'home' });
   const go = (target: ReturnTarget) => setScreen(target);
+
+  useEffect(() => {
+    // Always land on dashboard after a fresh login / logout cycle.
+    if (session) setScreen({ name: 'home' });
+  }, [session?.userId]);
 
   if (!authReady) {
     return (
