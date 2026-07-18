@@ -6,24 +6,23 @@ Capture a receipt with the camera, upload a screenshot, or enter a transaction m
 
 ## Features
 
-- Cash in / cash out ledger with **Today’s money budget** (Cash In adds, Cash Out subtracts)
+- Clean dashboard: today’s money, Cash In / Cash Out, recent activity
+- **Settings**: today’s budget, reports, and cloud sync
 - **Fee profit** shown for today and all-time
 - Dedicated **Cash In** and **Cash Out** screens with scan + manual entry inside each
 - Camera / gallery receipt scan with OCR
 - **Completed / Not completed** tags for cash ins
 - Claimed / Unclaimed marker + auto fee rules for cash outs
 - Duplicate Ref No. blocking
-- **Cloud sync** across phones with a shared sync code
-- **Reports**: today, weekly, monthly, yearly, custom date range, unclaimed, incomplete, fees — downloadable CSV
 - Local persistence on device
 
 ## Try on Android (installer)
 
 Download the APK:
 
-**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.2/GCashFlow-android.apk**
+**https://github.com/I4nnParadoxMarketing/theme-testing/releases/download/gcashflow-v1.1.3/GCashFlow-android.apk**
 
-Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.2
+Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag/gcashflow-v1.1.3
 
 1. Open the download link on your Android phone
 2. Allow **Install unknown apps** if prompted
@@ -31,19 +30,27 @@ Release page: https://github.com/I4nnParadoxMarketing/theme-testing/releases/tag
 
 Package id: `com.gcashflow.tracker`
 
+## Settings
+
+Open **Settings** from the dashboard for:
+
+- Today’s money budget
+- Reports (CSV download)
+- Cloud sync
+
 ## Cloud sync (multi-device)
 
-1. On phone A open **Cloud sync**
+1. On phone A open **Settings → Cloud sync**
 2. Tap **Create new sync code** (Quick sync works immediately)
 3. Tap **Copy sync code**
-4. On phone B open **Cloud sync** → paste code → **Join & download transactions**
+4. On phone B open **Settings → Cloud sync** → paste code → **Join & download transactions**
 5. New saves upload automatically when sync is enabled
 
 For short permanent codes, create a free Pantry at [getpantry.cloud](https://getpantry.cloud/), paste the Pantry ID in Sync settings, then create a sync code.
 
 ## Reports & download
 
-Open **Reports** to view:
+Open **Settings → Reports** to view:
 
 - Today
 - Weekly (last 7 days)

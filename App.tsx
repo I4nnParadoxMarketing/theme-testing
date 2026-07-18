@@ -13,6 +13,7 @@ import { HomeScreen } from './src/screens/HomeScreen';
 import { ReportsScreen } from './src/screens/ReportsScreen';
 import { ReviewScreen } from './src/screens/ReviewScreen';
 import { ScanScreen, type ScanResult } from './src/screens/ScanScreen';
+import { SettingsScreen } from './src/screens/SettingsScreen';
 import { SyncScreen } from './src/screens/SyncScreen';
 import { TypeHubScreen } from './src/screens/TypeHubScreen';
 import { colors } from './src/theme';
@@ -20,14 +21,16 @@ import type { Transaction, TransactionType } from './src/types';
 
 type ReturnTarget =
   | { name: 'home' }
-  | { name: 'typeHub'; type: TransactionType };
+  | { name: 'typeHub'; type: TransactionType }
+  | { name: 'settings' };
 
 type Screen =
   | { name: 'home' }
+  | { name: 'settings' }
   | { name: 'typeHub'; type: TransactionType }
   | { name: 'scan'; scanType: TransactionType; returnTo: ReturnTarget }
-  | { name: 'sync' }
-  | { name: 'reports' }
+  | { name: 'sync'; returnTo: ReturnTarget }
+  | { name: 'reports'; returnTo: ReturnTarget }
   | {
       name: 'review';
       mode: 'create' | 'edit' | 'from-scan';
@@ -72,8 +75,19 @@ export default function App() {
                 returnTo: { name: 'home' },
               })
             }
-            onOpenSync={() => setScreen({ name: 'sync' })}
-            onOpenReports={() => setScreen({ name: 'reports' })}
+            onOpenSettings={() => setScreen({ name: 'settings' })}
+          />
+        ) : null}
+
+        {screen.name === 'settings' ? (
+          <SettingsScreen
+            onBack={() => setScreen({ name: 'home' })}
+            onOpenSync={() =>
+              setScreen({ name: 'sync', returnTo: { name: 'settings' } })
+            }
+            onOpenReports={() =>
+              setScreen({ name: 'reports', returnTo: { name: 'settings' } })
+            }
           />
         ) : null}
 
@@ -125,11 +139,11 @@ export default function App() {
         ) : null}
 
         {screen.name === 'sync' ? (
-          <SyncScreen onBack={() => setScreen({ name: 'home' })} />
+          <SyncScreen onBack={() => go(screen.returnTo)} />
         ) : null}
 
         {screen.name === 'reports' ? (
-          <ReportsScreen onBack={() => setScreen({ name: 'home' })} />
+          <ReportsScreen onBack={() => go(screen.returnTo)} />
         ) : null}
 
         {screen.name === 'review' ? (
