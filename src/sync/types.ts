@@ -14,11 +14,21 @@ export interface SyncMeta {
   lastError?: string;
 }
 
+export interface SyncedBudget {
+  date: string;
+  startingAmount: number;
+  updatedAt: string;
+}
+
 export interface CloudRoomPayload {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   syncCode: string;
   updatedAt: string;
   transactions: Transaction[];
   /** Synced accounts (admin/staff). Present from version 2. */
   users?: AppUser[];
+  /** Today’s starting budget. Present from version 3. */
+  budget?: SyncedBudget | null;
+  /** Soft-deleted transaction ids so deletes survive merge. Present from version 3. */
+  deletedIds?: string[];
 }

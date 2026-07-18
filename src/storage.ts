@@ -40,7 +40,13 @@ export async function loadTransactions(): Promise<Transaction[]> {
         fee: typeof item.fee === 'number' ? item.fee : 0,
         claimed: item.type === 'cash_out' ? Boolean(item.claimed) : false,
         completed: item.type === 'cash_in' ? Boolean(item.completed) : false,
-      }));
+        updatedAt:
+          typeof item.updatedAt === 'string' && item.updatedAt
+            ? item.updatedAt
+            : item.createdAt,
+        deletedAt: typeof item.deletedAt === 'string' ? item.deletedAt : undefined,
+      }))
+      .filter((item) => !item.deletedAt);
   } catch (error) {
     console.warn('Failed to load transactions', error);
     return [];

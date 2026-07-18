@@ -1,5 +1,13 @@
 import type { AppUser } from '../auth/types';
 import { loadUsers, mergeUsers, saveUsers } from '../auth/userStore';
+import {
+  loadStoredDailyBudget,
+  mergeDailyBudget,
+  saveDailyBudget,
+  todayLocalDate,
+  type DailyBudget,
+} from '../budget';
+import { loadTransactions } from '../storage';
 import type { Transaction } from '../types';
 import {
   GITHUB_API_BASE,
@@ -8,28 +16,50 @@ import {
   JSONBLOB_API,
   PANTRY_API,
 } from './config';
+import { loadDeletedIds, saveDeletedIds } from './deletedIds';
+import { mergeTransactions } from './mergeTransactions';
 import { createSyncCode, loadSyncMeta, saveSyncMeta } from './syncMeta';
-import type { CloudRoomPayload, SyncMeta } from './types';
+import type { CloudRoomPayload, SyncedBudget, SyncMeta } from './types';
+
+export { mergeTransactions } from './mergeTransactions';
 
 function sanitizeTransactions(transactions: Transaction[]): Transaction[] {
-  return transactions.map((item) => ({
-    ...item,
-    imageUri: undefined,
-    rawText: item.rawText?.slice(0, 2000),
-  }));
+  return transactions
+    .filter((item) => !item.deletedAt)
+    .map((item) => ({
+      ...item,
+      imageUri: undefined,
+      rawText: item.rawText?.slice(0, 2000),
+      updatedAt: item.updatedAt || item.createdAt,
+    }));
+}
+
+function toSyncedBudget(budget: DailyBudget | null | undefined): SyncedBudget | null {
+  if (!budget) return null;
+  const today = todayLocalDate();
+  if (budget.date !== today) return null;
+  return {
+    date: budget.date,
+    startingAmount: budget.startingAmount,
+    updatedAt: budget.updatedAt || new Date().toISOString(),
+  };
 }
 
 function buildPayload(
   syncCode: string,
   transactions: Transaction[],
   users: AppUser[],
+  budget?: DailyBudget | null,
+  deletedIds: string[] = [],
 ): CloudRoomPayload {
   return {
-    version: 2,
+    version: 3,
     syncCode,
     updatedAt: new Date().toISOString(),
     transactions: sanitizeTransactions(transactions),
     users,
+    budget: toSyncedBudget(budget),
+    deletedIds,
   };
 }
 
@@ -64,7 +94,6 @@ function looksLikeBlobId(value: string): boolean {
 }
 
 async function pushJsonBlob(syncCode: string, payload: CloudRoomPayload): Promise<string> {
-  // syncCode for jsonblob is the blob id once created
   if (looksLikeBlobId(syncCode)) {
     const res = await fetch(`${JSONBLOB_API}/${syncCode}`, {
       method: 'PUT',
@@ -158,12 +187,21 @@ export async function pushTransactions(
   transactions: Transaction[],
   meta?: SyncMeta,
   users?: AppUser[],
+  extras?: { budget?: DailyBudget | null; deletedIds?: string[] },
 ): Promise<SyncMeta> {
   const current = meta ?? (await loadSyncMeta());
   if (!current.enabled || !current.syncCode) return current;
 
   const accountUsers = users ?? (await loadUsers());
-  const payload = buildPayload(current.syncCode, transactions, accountUsers);
+  const budget = extras?.budget ?? (await loadStoredDailyBudget());
+  const deletedIds = extras?.deletedIds ?? (await loadDeletedIds());
+  const payload = buildPayload(
+    current.syncCode,
+    transactions,
+    accountUsers,
+    budget,
+    deletedIds,
+  );
   let next = { ...current, lastError: undefined as string | undefined };
 
   try {
@@ -192,10 +230,18 @@ export async function pullTransactions(meta?: SyncMeta): Promise<{
   meta: SyncMeta;
   transactions: Transaction[] | null;
   users: AppUser[] | null;
+  budget: SyncedBudget | null;
+  deletedIds: string[];
 }> {
   const current = meta ?? (await loadSyncMeta());
   if (!current.enabled || !current.syncCode) {
-    return { meta: current, transactions: null, users: null };
+    return {
+      meta: current,
+      transactions: null,
+      users: null,
+      budget: null,
+      deletedIds: [],
+    };
   }
 
   try {
@@ -219,6 +265,8 @@ export async function pullTransactions(meta?: SyncMeta): Promise<{
       meta: next,
       transactions: payload?.transactions ?? null,
       users: payload?.users ?? null,
+      budget: payload?.budget ?? null,
+      deletedIds: Array.isArray(payload?.deletedIds) ? payload!.deletedIds! : [],
     };
   } catch (error) {
     const next = {
@@ -238,12 +286,65 @@ export async function applyRemoteUsers(remoteUsers: AppUser[] | null | undefined
   return saveUsers(merged);
 }
 
+/**
+ * Pull cloud data, merge with local (transactions, users, budget, deletes),
+ * then push the unified room back. This is the main path for keeping phones aligned.
+ */
+export async function syncRoundTrip(
+  localTransactions: Transaction[],
+  meta?: SyncMeta,
+): Promise<{
+  meta: SyncMeta;
+  transactions: Transaction[];
+  users: AppUser[];
+  budget: DailyBudget;
+}> {
+  const current = meta ?? (await loadSyncMeta());
+  if (!current.enabled || !current.syncCode) {
+    const budget = mergeDailyBudget(await loadStoredDailyBudget(), null);
+    return {
+      meta: current,
+      transactions: localTransactions,
+      users: await loadUsers(),
+      budget,
+    };
+  }
+
+  const pulled = await pullTransactions(current);
+  const users = await applyRemoteUsers(pulled.users);
+
+  const localBudget = await loadStoredDailyBudget();
+  const budget = mergeDailyBudget(localBudget, pulled.budget);
+  await saveDailyBudget(budget);
+
+  const localDeleted = await loadDeletedIds();
+  const merged = mergeTransactions(localTransactions, pulled.transactions ?? [], [
+    ...localDeleted,
+    ...pulled.deletedIds,
+  ]);
+  await saveDeletedIds(merged.deletedIds);
+
+  const pushed = await pushTransactions(merged.transactions, pulled.meta, users, {
+    budget,
+    deletedIds: merged.deletedIds,
+  });
+
+  return {
+    meta: pushed,
+    transactions: merged.transactions,
+    users,
+    budget,
+  };
+}
+
 export async function createSyncRoom(
   transactions: Transaction[],
   options: { provider: SyncMeta['provider']; pantryId?: string; githubToken?: string },
   users?: AppUser[],
 ): Promise<SyncMeta> {
   const accountUsers = users ?? (await loadUsers());
+  const budget = await loadStoredDailyBudget();
+  const deletedIds = await loadDeletedIds();
   const code = options.provider === 'jsonblob' ? 'pending' : createSyncCode(6);
   let meta: SyncMeta = {
     enabled: true,
@@ -253,7 +354,13 @@ export async function createSyncRoom(
     githubToken: options.githubToken?.trim() || undefined,
   };
 
-  const payload = buildPayload(code === 'pending' ? 'NEW' : code, transactions, accountUsers);
+  const payload = buildPayload(
+    code === 'pending' ? 'NEW' : code,
+    transactions,
+    accountUsers,
+    budget,
+    deletedIds,
+  );
 
   if (options.provider === 'pantry') {
     if (!meta.pantryId) throw new Error('Pantry ID is required for permanent sync.');
@@ -261,7 +368,7 @@ export async function createSyncRoom(
     await pushPantry(
       meta.pantryId,
       meta.syncCode,
-      buildPayload(meta.syncCode, transactions, accountUsers),
+      buildPayload(meta.syncCode, transactions, accountUsers, budget, deletedIds),
     );
   } else if (options.provider === 'github') {
     if (!meta.githubToken) throw new Error('GitHub token is required for GitHub sync.');
@@ -269,7 +376,7 @@ export async function createSyncRoom(
     await pushGitHub(
       meta.githubToken,
       meta.syncCode,
-      buildPayload(meta.syncCode, transactions, accountUsers),
+      buildPayload(meta.syncCode, transactions, accountUsers, budget, deletedIds),
     );
   } else {
     const blobId = await pushJsonBlob('', payload);
@@ -284,7 +391,12 @@ export async function createSyncRoom(
 export async function joinSyncRoom(
   syncCode: string,
   options: { provider: SyncMeta['provider']; pantryId?: string; githubToken?: string },
-): Promise<{ meta: SyncMeta; transactions: Transaction[]; users: AppUser[] }> {
+): Promise<{
+  meta: SyncMeta;
+  transactions: Transaction[];
+  users: AppUser[];
+  budget: DailyBudget;
+}> {
   const code = syncCode.trim();
   if (!code) throw new Error('Enter a sync code.');
 
@@ -297,60 +409,35 @@ export async function joinSyncRoom(
   };
 
   const pulled = await pullTransactions(meta);
-  if (!pulled.transactions) {
+  if (!pulled.transactions && !pulled.users?.length && !pulled.budget) {
     throw new Error('No cloud room found for that sync code.');
   }
 
   const users = await applyRemoteUsers(pulled.users);
+  const localBudget = await loadStoredDailyBudget();
+  const budget = mergeDailyBudget(localBudget, pulled.budget);
+  await saveDailyBudget(budget);
+
+  const localDeleted = await loadDeletedIds();
+  const localTx = await loadTransactions();
+  const merged = mergeTransactions(localTx, pulled.transactions ?? [], [
+    ...localDeleted,
+    ...pulled.deletedIds,
+  ]);
+  await saveDeletedIds(merged.deletedIds);
+
   const saved = { ...meta, lastSyncedAt: new Date().toISOString() };
   await saveSyncMeta(saved);
-  return { meta: saved, transactions: pulled.transactions, users };
-}
 
-export function mergeTransactions(local: Transaction[], remote: Transaction[]): Transaction[] {
-  const map = new Map<string, Transaction>();
-  for (const item of [...remote, ...local]) {
-    const existing = map.get(item.id);
-    if (!existing) {
-      map.set(item.id, item);
-      continue;
-    }
-    const existingTime = Date.parse(existing.createdAt || existing.occurredAt) || 0;
-    const nextTime = Date.parse(item.createdAt || item.occurredAt) || 0;
-    // Prefer claimed/completed=true and newer timestamps for same id
-    map.set(item.id, {
-      ...existing,
-      ...item,
-      claimed: Boolean(existing.claimed || item.claimed),
-      completed: Boolean(existing.completed || item.completed),
-      createdAt: existingTime <= nextTime ? existing.createdAt : item.createdAt,
-    });
-  }
+  const pushed = await pushTransactions(merged.transactions, saved, users, {
+    budget,
+    deletedIds: merged.deletedIds,
+  });
 
-  // Deduplicate by reference (keep first / newest occurredAt)
-  const byRef = new Map<string, Transaction>();
-  const noRef: Transaction[] = [];
-  for (const item of map.values()) {
-    const ref = (item.reference || '').replace(/\s+/g, '').toUpperCase();
-    if (!ref) {
-      noRef.push(item);
-      continue;
-    }
-    const prev = byRef.get(ref);
-    if (!prev) {
-      byRef.set(ref, item);
-      continue;
-    }
-    const prevTime = Date.parse(prev.occurredAt || prev.createdAt) || 0;
-    const itemTime = Date.parse(item.occurredAt || item.createdAt) || 0;
-    const mergedFlags = {
-      claimed: Boolean(prev.claimed || item.claimed),
-      completed: Boolean(prev.completed || item.completed),
-    };
-    byRef.set(ref, itemTime >= prevTime ? { ...item, ...mergedFlags } : { ...prev, ...mergedFlags });
-  }
-
-  return [...byRef.values(), ...noRef].sort(
-    (a, b) => Date.parse(b.occurredAt || b.createdAt) - Date.parse(a.occurredAt || a.createdAt),
-  );
+  return {
+    meta: pushed,
+    transactions: merged.transactions,
+    users,
+    budget,
+  };
 }

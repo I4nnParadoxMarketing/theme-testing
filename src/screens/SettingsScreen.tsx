@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { loadDailyBudget, saveDailyBudget, todayLocalDate } from '../budget';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
@@ -27,25 +26,22 @@ interface Props {
 
 export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccount }: Props) {
   const { currentUser, isAdmin, logout } = useAuth();
-  const { transactions, syncMeta, syncing, summary } = useTransactions();
-  const [budgetInput, setBudgetInput] = useState('');
-  const [startingBudget, setStartingBudget] = useState(0);
-  const [budgetReady, setBudgetReady] = useState(false);
+  const {
+    transactions,
+    syncMeta,
+    syncing,
+    summary,
+    startingBudget,
+    saveStartingBudget,
+  } = useTransactions();
+  const [budgetInput, setBudgetInput] = useState(
+    startingBudget > 0 ? String(startingBudget) : '',
+  );
   const [budgetStatus, setBudgetStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const budget = await loadDailyBudget();
-      if (!mounted) return;
-      setStartingBudget(budget.startingAmount);
-      setBudgetInput(budget.startingAmount > 0 ? String(budget.startingAmount) : '');
-      setBudgetReady(true);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
+    setBudgetInput(startingBudget > 0 ? String(startingBudget) : '');
+  }, [startingBudget]);
 
   const today = useMemo(
     () => computeTodayStats(transactions, startingBudget),
@@ -58,9 +54,12 @@ export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccoun
       setBudgetStatus('Enter a valid budget amount.');
       return;
     }
-    await saveDailyBudget({ date: todayLocalDate(), startingAmount: amount });
-    setStartingBudget(amount);
-    setBudgetStatus(`Today’s budget set to ${formatPeso(amount)}.`);
+    await saveStartingBudget(amount);
+    setBudgetStatus(
+      syncMeta.enabled
+        ? `Today’s budget set to ${formatPeso(amount)} and synced to other devices.`
+        : `Today’s budget set to ${formatPeso(amount)}.`,
+    );
   };
 
   return (
@@ -98,7 +97,7 @@ export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccoun
               placeholder="e.g. 10000"
               placeholderTextColor={colors.inkSoft}
               style={styles.budgetInput}
-              editable={budgetReady}
+              editable={true}
             />
             <PrimaryButton label="Save" onPress={() => void saveBudget()} style={styles.budgetBtn} />
           </View>

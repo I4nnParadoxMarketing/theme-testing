@@ -185,6 +185,7 @@ export function ReviewScreen({
         imageUri: draft.imageUri || undefined,
       });
     } else {
+      const now = new Date().toISOString();
       const next: Transaction = {
         id: createId(),
         type: draft.type,
@@ -194,7 +195,8 @@ export function ReviewScreen({
         counterparty: draft.counterparty.trim() || undefined,
         note: draft.note.trim() || undefined,
         occurredAt,
-        createdAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
         source: draft.source || 'manual',
         claimed: draft.type === 'cash_out' ? Boolean(draft.claimed) : false,
         completed,

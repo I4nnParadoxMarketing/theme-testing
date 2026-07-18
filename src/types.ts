@@ -12,11 +12,15 @@ export interface Transaction {
   note?: string;
   occurredAt: string;
   createdAt: string;
+  /** Last edit time for cross-device last-write-wins merge. */
+  updatedAt?: string;
   source: TransactionSource;
   /** Cash-out only: whether the payout has been claimed. */
   claimed?: boolean;
   /** Cash-in only: whether the cash in is completed. */
   completed?: boolean;
+  /** Soft-delete timestamp when present. */
+  deletedAt?: string;
   rawText?: string;
   imageUri?: string;
 }

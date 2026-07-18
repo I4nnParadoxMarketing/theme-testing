@@ -60,7 +60,8 @@ export function SyncScreen({ onBack }: Props) {
         <Text style={styles.brand}>Cloud sync</Text>
         <Text style={styles.title}>Share across devices</Text>
         <Text style={styles.body}>
-          Create a sync code here, then join with the same code on another phone. Transactions stay online and update on both devices.
+          Create a sync code here, then join with the same code on another phone. Transactions,
+          accounts, today’s budget, completed/claimed flags, and deletes stay aligned across devices.
         </Text>
 
         <Text style={styles.label}>Cloud provider</Text>
@@ -171,22 +172,25 @@ export function SyncScreen({ onBack }: Props) {
           style={styles.input}
         />
         <PrimaryButton
-          label="Join & download transactions"
+          label="Join & sync all data"
           variant="secondary"
           loading={busy}
           disabled={busy || syncing}
           style={styles.gap}
           onPress={() =>
             run(async () => {
-              const { meta, transactions: remote, users } = await joinSyncRoom(joinCode, {
-                provider,
-                pantryId,
-                githubToken,
-              });
+              const { meta, transactions: remote, users, budget } = await joinSyncRoom(
+                joinCode,
+                {
+                  provider,
+                  pantryId,
+                  githubToken,
+                },
+              );
               await replaceAll(remote);
               await setSyncMetaState(meta);
               setStatus(
-                `Joined ${meta.syncCode}. Loaded ${remote.length} transactions and ${users.length} accounts.`,
+                `Joined ${meta.syncCode}. Synced ${remote.length} transactions, ${users.length} accounts, budget ₱${budget.startingAmount}.`,
               );
             })
           }

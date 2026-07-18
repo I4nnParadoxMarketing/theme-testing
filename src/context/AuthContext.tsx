@@ -11,7 +11,7 @@ import type { AppUser, AuthSession, UserRole } from '../auth/types';
 import { hashPassword, verifyPassword } from '../auth/password';
 import { clearSession, loadSession, saveSession } from '../auth/sessionStore';
 import { loadUsers, saveUsers, subscribeUsers } from '../auth/userStore';
-import { pushTransactions } from '../sync/cloudSync';
+import { syncRoundTrip } from '../sync/cloudSync';
 import { loadSyncMeta } from '../sync/syncMeta';
 import { loadTransactions } from '../storage';
 import { createId } from '../utils/id';
@@ -39,11 +39,12 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function syncUsersOnline(users: AppUser[]) {
+async function syncUsersOnline(_users: AppUser[]) {
   const meta = await loadSyncMeta();
   if (!meta.enabled || !meta.syncCode) return;
   const transactions = await loadTransactions();
-  await pushTransactions(transactions, meta, users);
+  // Pull+merge+push so account changes don't wipe newer cloud edits.
+  await syncRoundTrip(transactions, meta);
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

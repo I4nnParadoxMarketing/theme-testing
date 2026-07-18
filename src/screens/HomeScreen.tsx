@@ -8,9 +8,8 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { loadDailyBudget } from '../budget';
 import { BalanceHero } from '../components/BalanceHero';
 import { LogoutIconButton } from '../components/LogoutIconButton';
 import { NotificationBell } from '../components/NotificationBell';
@@ -43,10 +42,10 @@ export function HomeScreen({
   onOpenNotifications,
 }: Props) {
   const { isAdmin, logout, currentUser } = useAuth();
-  const { transactions, summary, ready, setClaimed, setCompleted } = useTransactions();
+  const { transactions, summary, ready, setClaimed, setCompleted, startingBudget } =
+    useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
-  const [startingBudget, setStartingBudget] = useState(0);
   const alertCount = summary.incompleteCount + summary.unclaimedCount;
   const greeting = useMemo(
     () => buildGreeting(currentUser?.displayName, currentUser?.username),
@@ -59,17 +58,6 @@ export function HomeScreen({
       Animated.timing(rise, { toValue: 0, duration: 520, useNativeDriver }),
     ]).start();
   }, [fade, rise]);
-
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const budget = await loadDailyBudget();
-      if (mounted) setStartingBudget(budget.startingAmount);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   const today = useMemo(
     () => computeTodayStats(transactions, startingBudget),

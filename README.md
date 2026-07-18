@@ -54,11 +54,14 @@ Open **Settings** from the dashboard for:
 
 ## Cloud sync (multi-device)
 
+Keeps **transactions, accounts, today’s budget, completed/claimed flags, and deletes** aligned across phones.
+
 1. On phone A open **Settings → Cloud sync**
 2. Tap **Create new sync code** (Quick sync works immediately)
 3. Tap **Copy sync code**
-4. On phone B open **Settings → Cloud sync** → paste code → **Join & download transactions**
-5. New saves upload automatically when sync is enabled
+4. On phone B open **Settings → Cloud sync** → paste code → **Join & sync all data**
+5. Saves, budget changes, and account updates pull+merge+push automatically when sync is enabled
+6. Opening the app (or returning to it) also refreshes from the cloud
 
 For short permanent codes, create a free Pantry at [getpantry.cloud](https://getpantry.cloud/), paste the Pantry ID in Sync settings, then create a sync code.
 

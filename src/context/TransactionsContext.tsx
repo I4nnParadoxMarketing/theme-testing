@@ -7,14 +7,17 @@ import React, {
   useState,
   type ReactNode,
 } from 'react';
+import { AppState, type AppStateStatus } from 'react-native';
 import { loadSession } from '../auth/sessionStore';
-import { loadTransactions, saveTransactions } from '../storage';
 import {
-  applyRemoteUsers,
-  mergeTransactions,
-  pullTransactions,
-  pushTransactions,
-} from '../sync/cloudSync';
+  loadDailyBudget,
+  saveDailyBudget,
+  todayLocalDate,
+  type DailyBudget,
+} from '../budget';
+import { loadTransactions, saveTransactions } from '../storage';
+import { syncRoundTrip } from '../sync/cloudSync';
+import { addDeletedIds } from '../sync/deletedIds';
 import { loadSyncMeta, saveSyncMeta } from '../sync/syncMeta';
 import type { SyncMeta } from '../sync/types';
 import type { BalanceSummary, Transaction } from '../types';
@@ -27,6 +30,7 @@ interface TransactionsContextValue {
   summary: BalanceSummary;
   syncMeta: SyncMeta;
   syncing: boolean;
+  startingBudget: number;
   addTransaction: (transaction: Transaction) => Promise<void>;
   updateTransaction: (id: string, patch: Partial<Transaction>) => Promise<void>;
   deleteTransaction: (id: string) => Promise<void>;
@@ -38,6 +42,7 @@ interface TransactionsContextValue {
   refreshFromCloud: () => Promise<void>;
   pushToCloud: () => Promise<void>;
   setSyncMetaState: (meta: SyncMeta) => Promise<void>;
+  saveStartingBudget: (amount: number) => Promise<void>;
 }
 
 const TransactionsContext = createContext<TransactionsContextValue | null>(null);
@@ -81,6 +86,14 @@ function sortTransactions(list: Transaction[]): Transaction[] {
   });
 }
 
+function touch(transaction: Transaction, patch: Partial<Transaction> = {}): Transaction {
+  return {
+    ...transaction,
+    ...patch,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [ready, setReady] = useState(false);
@@ -90,6 +103,11 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     syncCode: '',
   });
   const [syncing, setSyncing] = useState(false);
+  const [startingBudget, setStartingBudget] = useState(0);
+
+  const applyBudget = useCallback((budget: DailyBudget) => {
+    setStartingBudget(budget.startingAmount);
+  }, []);
 
   const persistLocal = useCallback(async (next: Transaction[]) => {
     const sorted = sortTransactions(next);
@@ -98,35 +116,44 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     return sorted;
   }, []);
 
-  const syncPush = useCallback(async (list: Transaction[], meta = syncMeta) => {
-    if (!meta.enabled || !meta.syncCode) return meta;
+  const runRoundTrip = useCallback(async (list: Transaction[], meta?: SyncMeta) => {
+    const current = meta ?? (await loadSyncMeta());
+    if (!current.enabled || !current.syncCode) {
+      return { meta: current, transactions: list };
+    }
     setSyncing(true);
     try {
-      return await pushTransactions(list, meta);
+      const result = await syncRoundTrip(list, current);
+      setSyncMeta(result.meta);
+      applyBudget(result.budget);
+      const sorted = sortTransactions(result.transactions);
+      setTransactions(sorted);
+      await saveTransactions(sorted);
+      return result;
     } finally {
       setSyncing(false);
     }
-  }, [syncMeta]);
+  }, [applyBudget]);
 
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const [stored, meta] = await Promise.all([loadTransactions(), loadSyncMeta()]);
+      const [stored, meta, budget] = await Promise.all([
+        loadTransactions(),
+        loadSyncMeta(),
+        loadDailyBudget(),
+      ]);
       let next = sortTransactions(stored);
       let nextMeta = meta;
+      let nextBudget = budget;
 
       if (meta.enabled && meta.syncCode) {
         try {
-          const pulled = await pullTransactions(meta);
-          nextMeta = pulled.meta;
-          if (pulled.users) {
-            await applyRemoteUsers(pulled.users);
-          }
-          if (pulled.transactions) {
-            next = sortTransactions(mergeTransactions(stored, pulled.transactions));
-            await saveTransactions(next);
-            await pushTransactions(next, nextMeta);
-          }
+          const result = await syncRoundTrip(stored, meta);
+          next = sortTransactions(result.transactions);
+          nextMeta = result.meta;
+          nextBudget = result.budget;
+          await saveTransactions(next);
         } catch {
           // Keep local data if cloud is unreachable on boot.
         }
@@ -135,13 +162,32 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       if (mounted) {
         setTransactions(next);
         setSyncMeta(nextMeta);
+        applyBudget(nextBudget);
         setReady(true);
       }
     })();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [applyBudget]);
+
+  useEffect(() => {
+    const onChange = (state: AppStateStatus) => {
+      if (state !== 'active') return;
+      void (async () => {
+        const meta = await loadSyncMeta();
+        if (!meta.enabled || !meta.syncCode) return;
+        try {
+          const local = await loadTransactions();
+          await runRoundTrip(local, meta);
+        } catch {
+          // Ignore background refresh errors.
+        }
+      })();
+    };
+    const sub = AppState.addEventListener('change', onChange);
+    return () => sub.remove();
+  }, [runRoundTrip]);
 
   const findByReference = useCallback(
     (reference: string, excludeId?: string) => {
@@ -166,13 +212,13 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       }
     }
 
+    const stamped = touch(transaction);
     const next = await persistLocal([
-      transaction,
-      ...current.filter((item) => item.id !== transaction.id),
+      stamped,
+      ...current.filter((item) => item.id !== stamped.id),
     ]);
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const updateTransaction = useCallback(async (id: string, patch: Partial<Transaction>) => {
     const current = await loadTransactions();
@@ -191,29 +237,29 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     }
 
     const next = await persistLocal(
-      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+      current.map((item) => (item.id === id ? touch(item, patch) : item)),
     );
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const deleteTransaction = useCallback(async (id: string) => {
     const current = await loadTransactions();
+    await addDeletedIds([id]);
     const next = await persistLocal(current.filter((item) => item.id !== id));
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const setClaimed = useCallback(async (id: string, claimed: boolean) => {
     const current = await loadTransactions();
     const next = await persistLocal(
       current.map((item) =>
-        item.id === id ? { ...item, claimed: item.type === 'cash_out' ? claimed : false } : item,
+        item.id === id
+          ? touch(item, { claimed: item.type === 'cash_out' ? claimed : false })
+          : item,
       ),
     );
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const setCompleted = useCallback(async (id: string, completed: boolean) => {
     const [current, session] = await Promise.all([loadTransactions(), loadSession()]);
@@ -228,63 +274,54 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
 
     const next = await persistLocal(
       current.map((item) =>
-        item.id === id ? { ...item, completed: Boolean(completed) } : item,
+        item.id === id ? touch(item, { completed: Boolean(completed) }) : item,
       ),
     );
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const clearAll = useCallback(async () => {
+    const current = await loadTransactions();
+    await addDeletedIds(current.map((item) => item.id));
     const next = await persistLocal([]);
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const replaceAll = useCallback(async (list: Transaction[]) => {
     const next = await persistLocal(list);
-    const meta = await syncPush(next);
-    if (meta) setSyncMeta(meta);
-  }, [persistLocal, syncPush]);
+    await runRoundTrip(next);
+  }, [persistLocal, runRoundTrip]);
 
   const refreshFromCloud = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const meta = await loadSyncMeta();
-      const pulled = await pullTransactions(meta);
-      setSyncMeta(pulled.meta);
-      if (pulled.users) {
-        await applyRemoteUsers(pulled.users);
-      }
-      if (pulled.transactions) {
-        const local = await loadTransactions();
-        const merged = sortTransactions(mergeTransactions(local, pulled.transactions));
-        await saveTransactions(merged);
-        setTransactions(merged);
-        const pushed = await pushTransactions(merged, pulled.meta);
-        setSyncMeta(pushed);
-      }
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
+    const meta = await loadSyncMeta();
+    const local = await loadTransactions();
+    await runRoundTrip(local, meta);
+  }, [runRoundTrip]);
 
   const pushToCloud = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const meta = await loadSyncMeta();
-      const local = await loadTransactions();
-      const pushed = await pushTransactions(local, meta);
-      setSyncMeta(pushed);
-    } finally {
-      setSyncing(false);
-    }
-  }, []);
+    // Upload still does pull+merge+push so this phone cannot wipe newer cloud edits.
+    const meta = await loadSyncMeta();
+    const local = await loadTransactions();
+    await runRoundTrip(local, meta);
+  }, [runRoundTrip]);
 
   const setSyncMetaState = useCallback(async (meta: SyncMeta) => {
     await saveSyncMeta(meta);
     setSyncMeta(meta);
   }, []);
+
+  const saveStartingBudget = useCallback(async (amount: number) => {
+    const budget = await saveDailyBudget({
+      date: todayLocalDate(),
+      startingAmount: amount,
+      updatedAt: new Date().toISOString(),
+    });
+    applyBudget(budget);
+    const meta = await loadSyncMeta();
+    if (!meta.enabled || !meta.syncCode) return;
+    const local = await loadTransactions();
+    await runRoundTrip(local, meta);
+  }, [applyBudget, runRoundTrip]);
 
   const value = useMemo<TransactionsContextValue>(
     () => ({
@@ -293,6 +330,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       summary: computeSummary(transactions),
       syncMeta,
       syncing,
+      startingBudget,
       addTransaction,
       updateTransaction,
       deleteTransaction,
@@ -304,12 +342,14 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       refreshFromCloud,
       pushToCloud,
       setSyncMetaState,
+      saveStartingBudget,
     }),
     [
       transactions,
       ready,
       syncMeta,
       syncing,
+      startingBudget,
       addTransaction,
       updateTransaction,
       deleteTransaction,
@@ -321,6 +361,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
       refreshFromCloud,
       pushToCloud,
       setSyncMetaState,
+      saveStartingBudget,
     ],
   );
 
