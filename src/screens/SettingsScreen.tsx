@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -25,7 +26,7 @@ interface Props {
 }
 
 export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccount }: Props) {
-  const { currentUser, isAdmin } = useAuth();
+  const { currentUser, isAdmin, logout } = useAuth();
   const { transactions, syncMeta, syncing, summary } = useTransactions();
   const [budgetInput, setBudgetInput] = useState('');
   const [startingBudget, setStartingBudget] = useState(0);
@@ -130,6 +131,17 @@ export function SettingsScreen({ onBack, onOpenSync, onOpenReports, onOpenAccoun
             {syncing ? 'Syncing…' : syncMeta.enabled ? 'Manage sync →' : 'Set up sync →'}
           </Text>
         </Pressable>
+
+        <PrimaryButton
+          label="Sign out"
+          variant="secondary"
+          onPress={() => {
+            Alert.alert('Sign out', 'Sign out of GCashFlow on this phone?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign out', style: 'destructive', onPress: () => void logout() },
+            ]);
+          }}
+        />
       </ScrollView>
     </SafeAreaView>
   );

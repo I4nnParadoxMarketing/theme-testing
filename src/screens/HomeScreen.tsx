@@ -12,8 +12,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { loadDailyBudget } from '../budget';
 import { BalanceHero } from '../components/BalanceHero';
+import { LogoutIconButton } from '../components/LogoutIconButton';
 import { NotificationBell } from '../components/NotificationBell';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { SettingsIconButton } from '../components/SettingsIconButton';
 import { TransactionRow } from '../components/TransactionRow';
 import { useAuth } from '../context/AuthContext';
 import { useTransactions } from '../context/TransactionsContext';
@@ -39,7 +41,7 @@ export function HomeScreen({
   onOpenSettings,
   onOpenNotifications,
 }: Props) {
-  const { isAdmin } = useAuth();
+  const { isAdmin, logout } = useAuth();
   const { transactions, summary, ready, setClaimed, setCompleted } = useTransactions();
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(18)).current;
@@ -83,9 +85,10 @@ export function HomeScreen({
         >
           <View style={styles.topBar}>
             <NotificationBell count={alertCount} onPress={onOpenNotifications} />
-            <Pressable onPress={onOpenSettings} hitSlop={10} style={styles.settingsBtn}>
-              <Text style={styles.settingsText}>Settings</Text>
-            </Pressable>
+            <View style={styles.topBarRight}>
+              <SettingsIconButton onPress={onOpenSettings} />
+              <LogoutIconButton onPress={() => void logout()} />
+            </View>
           </View>
 
           <BalanceHero summary={summary} today={today} startingBudget={startingBudget} />
@@ -167,14 +170,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: spacing.sm,
   },
-  settingsBtn: {
-    paddingVertical: 6,
-    paddingHorizontal: 4,
-  },
-  settingsText: {
-    fontFamily: 'DMSans_700Bold',
-    fontSize: 15,
-    color: colors.ocean,
+  topBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
   actions: {
     flexDirection: 'row',
