@@ -82,7 +82,7 @@ export function TypeHubScreen({
           </Text>
           <Text style={styles.support}>
             {isIn
-              ? 'Scan a Cash In receipt or add one manually. Mark Completed when done.'
+              ? 'Add a Cash In entry, then scan a receipt from the form if you want OCR fill-in. Mark Completed when done.'
               : 'Scan a Cash Out receipt or add one manually. Search by reference to find a payout.'}
           </Text>
 
@@ -102,13 +102,19 @@ export function TypeHubScreen({
           </View>
 
           <View style={styles.actions}>
-            <PrimaryButton label="Scan receipt" onPress={onScan} style={styles.actionFlex} />
-            <PrimaryButton
-              label="Add manually"
-              onPress={onManual}
-              variant="secondary"
-              style={styles.actionFlex}
-            />
+            {isIn ? (
+              <PrimaryButton label="Add cash in" onPress={onManual} style={styles.actionFlex} />
+            ) : (
+              <>
+                <PrimaryButton label="Scan receipt" onPress={onScan} style={styles.actionFlex} />
+                <PrimaryButton
+                  label="Add manually"
+                  onPress={onManual}
+                  variant="secondary"
+                  style={styles.actionFlex}
+                />
+              </>
+            )}
           </View>
 
           {!isIn ? (
@@ -148,7 +154,9 @@ export function TypeHubScreen({
               <Text style={styles.emptyBody}>
                 {!isIn && normalizeSearch(referenceQuery)
                   ? 'Try another Ref No., or clear the search to see all cash outs.'
-                  : `Scan a GCash ${isIn ? 'Cash In' : 'Cash Out'} receipt image, or enter details by hand.`}
+                  : isIn
+                    ? 'Add a Cash In entry and scan a receipt from the form, or type the details by hand.'
+                    : 'Scan a GCash Cash Out receipt image, or enter details by hand.'}
               </Text>
             </View>
           ) : (

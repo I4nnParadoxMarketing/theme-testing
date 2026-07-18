@@ -30,13 +30,27 @@ type ReturnTarget =
   | { name: 'account' }
   | { name: 'notifications' };
 
+type ReviewResume = {
+  mode: 'create' | 'edit' | 'from-scan';
+  transaction?: Transaction;
+  lockedType?: TransactionType;
+  returnTo: ReturnTarget;
+  scan?: ScanResult;
+};
+
 type Screen =
   | { name: 'home' }
   | { name: 'settings' }
   | { name: 'account' }
   | { name: 'notifications' }
   | { name: 'typeHub'; type: TransactionType }
-  | { name: 'scan'; scanType: TransactionType; returnTo: ReturnTarget }
+  | {
+      name: 'scan';
+      scanType: TransactionType;
+      returnTo: ReturnTarget;
+      /** When set, cancel/success returns into this review form instead of the hub. */
+      resumeReview?: ReviewResume;
+    }
   | { name: 'sync'; returnTo: ReturnTarget }
   | { name: 'reports'; returnTo: ReturnTarget }
   | {
@@ -153,16 +167,40 @@ function AppShell() {
       {screen.name === 'scan' ? (
         <ScanScreen
           scanType={screen.scanType}
-          onCancel={() => go(screen.returnTo)}
-          onParsed={(scan) =>
+          onCancel={() => {
+            if (screen.resumeReview) {
+              setScreen({
+                name: 'review',
+                mode: screen.resumeReview.mode,
+                scan: screen.resumeReview.scan,
+                transaction: screen.resumeReview.transaction,
+                lockedType: screen.resumeReview.lockedType,
+                returnTo: screen.resumeReview.returnTo,
+              });
+              return;
+            }
+            go(screen.returnTo);
+          }}
+          onParsed={(scan) => {
+            if (screen.resumeReview) {
+              setScreen({
+                name: 'review',
+                mode: screen.resumeReview.mode === 'edit' ? 'edit' : 'from-scan',
+                scan,
+                transaction: screen.resumeReview.transaction,
+                lockedType: screen.resumeReview.lockedType ?? screen.scanType,
+                returnTo: screen.resumeReview.returnTo,
+              });
+              return;
+            }
             setScreen({
               name: 'review',
               mode: 'from-scan',
               scan,
               lockedType: screen.scanType,
               returnTo: screen.returnTo,
-            })
-          }
+            });
+          }}
         />
       ) : null}
 
@@ -180,6 +218,28 @@ function AppShell() {
           scanResult={screen.scan}
           transaction={screen.transaction}
           lockedType={screen.lockedType}
+          onScan={
+            (screen.lockedType ?? screen.transaction?.type) === 'cash_in'
+              ? () =>
+                  setScreen({
+                    name: 'scan',
+                    scanType: 'cash_in',
+                    returnTo: screen.returnTo,
+                    resumeReview: {
+                      mode:
+                        screen.mode === 'edit'
+                          ? 'edit'
+                          : screen.mode === 'from-scan'
+                            ? 'from-scan'
+                            : 'create',
+                      scan: screen.scan,
+                      transaction: screen.transaction,
+                      lockedType: screen.lockedType ?? 'cash_in',
+                      returnTo: screen.returnTo,
+                    },
+                  })
+              : undefined
+          }
           onDone={() => go(screen.returnTo)}
           onCancel={() => go(screen.returnTo)}
         />

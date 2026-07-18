@@ -19,8 +19,25 @@ interface Props {
   scanResult?: ScanResult | null;
   transaction?: Transaction | null;
   lockedType?: Transaction['type'];
+  onScan?: () => void;
   onDone: () => void;
   onCancel: () => void;
+}
+
+function mergeScanIntoDraft(base: TransactionDraft, scan: ScanResult): TransactionDraft {
+  const fromScan = draftFromScan(scan);
+  return {
+    ...base,
+    type: fromScan.type,
+    amount: fromScan.amount || base.amount,
+    fee: fromScan.fee || base.fee,
+    reference: fromScan.reference || base.reference,
+    counterparty: fromScan.counterparty || base.counterparty,
+    occurredAt: fromScan.occurredAt || base.occurredAt,
+    source: fromScan.source,
+    rawText: fromScan.rawText ?? base.rawText,
+    imageUri: fromScan.imageUri || base.imageUri,
+  };
 }
 
 function draftFromScan(scan: ScanResult): TransactionDraft {
@@ -65,6 +82,7 @@ export function ReviewScreen({
   scanResult,
   transaction,
   lockedType,
+  onScan,
   onDone,
   onCancel,
 }: Props) {
@@ -80,8 +98,21 @@ export function ReviewScreen({
           completed: false,
         }
       : mode === 'edit' && transaction
-        ? draftFromTransaction(transaction)
-        : emptyDraft(lockedType);
+        ? scanResult
+          ? {
+              ...mergeScanIntoDraft(draftFromTransaction(transaction), scanResult),
+              type: lockedType ?? transaction.type,
+              claimed: Boolean(transaction.claimed),
+              completed: Boolean(transaction.completed),
+            }
+          : draftFromTransaction(transaction)
+        : mode === 'create' && scanResult
+          ? {
+              ...draftFromScan(scanResult),
+              type: lockedType ?? scanResult.parsed.type ?? 'cash_in',
+              completed: false,
+            }
+          : emptyDraft(lockedType);
 
   const handleSubmit = async (draft: TransactionDraft) => {
     const amount = parseAmountInput(draft.amount);
@@ -163,6 +194,11 @@ export function ReviewScreen({
         initial={initial}
         lockType={Boolean(lockedType)}
         canMarkCompleted={isAdmin}
+        onScan={
+          onScan && (lockedType === 'cash_in' || initial.type === 'cash_in')
+            ? onScan
+            : undefined
+        }
         submitLabel={mode === 'edit' ? 'Save changes' : 'Save transaction'}
         onSubmit={handleSubmit}
         onCancel={onCancel}

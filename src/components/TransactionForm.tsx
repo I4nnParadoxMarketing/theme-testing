@@ -35,6 +35,8 @@ interface Props {
   lockType?: boolean;
   /** Staff cannot mark cash in completed. Admin can when reference is set. */
   canMarkCompleted?: boolean;
+  /** Shown on cash-in add/edit to open the receipt scanner. */
+  onScan?: () => void;
   submitLabel: string;
   onSubmit: (draft: TransactionDraft) => void | Promise<void>;
   onCancel: () => void;
@@ -80,6 +82,7 @@ export function TransactionForm({
   initial,
   lockType = false,
   canMarkCompleted = false,
+  onScan,
   submitLabel,
   onSubmit,
   onCancel,
@@ -207,7 +210,21 @@ export function TransactionForm({
       ) : null}
 
       <Text style={styles.heading}>Transaction details</Text>
-      <Text style={styles.support}>Confirm what was read from the receipt, then save.</Text>
+      <Text style={styles.support}>
+        {draft.type === 'cash_in' && onScan
+          ? 'Scan a Cash In receipt to fill fields, or enter them by hand, then save.'
+          : 'Confirm what was read from the receipt, then save.'}
+      </Text>
+
+      {draft.type === 'cash_in' && onScan ? (
+        <PrimaryButton
+          label="Scan receipt"
+          onPress={onScan}
+          variant="secondary"
+          style={styles.scanAction}
+          disabled={saving}
+        />
+      ) : null}
 
       {lockType ? (
         <View
@@ -446,6 +463,9 @@ const styles = StyleSheet.create({
     color: colors.inkSoft,
     marginTop: spacing.xs,
     marginBottom: spacing.lg,
+  },
+  scanAction: {
+    marginBottom: spacing.md,
   },
   typeRow: {
     flexDirection: 'row',
