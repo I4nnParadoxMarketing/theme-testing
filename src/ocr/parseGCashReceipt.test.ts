@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { parseGCashReceipt } from './parseGCashReceipt';
+import { SAMPLE_EXPRESS_SEND_TEXT } from './sampleExpressSend';
 
 const sampleCashIn = `
 GCash
@@ -39,5 +40,14 @@ assert.equal(cashOut.amount, 850);
 assert.equal(cashOut.fee, 10);
 assert.ok(cashOut.reference?.includes('7710'));
 assert.equal(cashOut.confidence, 'high');
+
+const express = parseGCashReceipt(SAMPLE_EXPRESS_SEND_TEXT);
+assert.equal(express.type, 'cash_out');
+assert.equal(express.amount, 200);
+assert.equal(express.fee, 0);
+assert.equal(express.reference, '0042 920 599051');
+assert.ok(express.counterparty?.includes('999 987 3253'));
+assert.ok(express.counterparty?.includes('HA'));
+assert.equal(express.confidence, 'high');
 
 console.log('parseGCashReceipt tests passed');

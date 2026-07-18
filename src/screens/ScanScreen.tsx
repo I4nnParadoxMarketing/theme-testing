@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -12,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { parseGCashReceipt } from '../ocr/parseGCashReceipt';
 import { recognizeTextFromImage } from '../ocr/recognizeText';
+import { SAMPLE_EXPRESS_SEND_PARSED } from '../ocr/sampleExpressSend';
 import { colors, radii, spacing } from '../theme';
 import type { ParsedReceipt, TransactionSource } from '../types';
 
@@ -35,18 +37,14 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
   const [status, setStatus] = useState('Ready to read a GCash receipt.');
   const [error, setError] = useState<string | null>(null);
 
-  const runOcr = async (uri: string, source: TransactionSource) => {
+  const runOcr = async (uri: string, source: TransactionSource, base64?: string) => {
     setBusy(true);
     setError(null);
     setPreviewUri(uri);
     setStatus('Reading text from the image…');
 
     try {
-      const text = await recognizeTextFromImage(uri);
-      if (!text.trim()) {
-        throw new Error('No text found. Try a clearer photo of the receipt.');
-      }
-
+      const text = await recognizeTextFromImage(uri, base64);
       const parsed = parseGCashReceipt(text);
       setStatus(
         parsed.amount
@@ -56,22 +54,40 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
       onParsed({ imageUri: uri, parsed, source });
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Could not read this image.';
-      setError(message);
-      setStatus('OCR failed. Try again or enter details manually.');
+      setError(
+        message.toLowerCase().includes('worker')
+          ? 'OCR engine failed on this device. Try again with internet, or use the sample receipt.'
+          : message,
+      );
+      setStatus('OCR failed. Try again, use the sample, or enter details manually.');
     } finally {
       setBusy(false);
     }
   };
 
+  const useSampleReceipt = () => {
+    setBusy(true);
+    setError(null);
+    setPreviewUri(null);
+    setStatus('Loaded Express Send sample (₱200.00).');
+    onParsed({
+      imageUri: '',
+      parsed: SAMPLE_EXPRESS_SEND_PARSED,
+      source: 'upload',
+    });
+    setBusy(false);
+  };
+
   const pickFromGallery = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      quality: 0.85,
+      quality: 0.7,
       allowsEditing: false,
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]?.uri) {
-      await runOcr(result.assets[0].uri, 'upload');
+      await runOcr(result.assets[0].uri, 'upload', result.assets[0].base64 ?? undefined);
     }
   };
 
@@ -83,12 +99,13 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
     }
 
     const result = await ImagePicker.launchCameraAsync({
-      quality: 0.85,
+      quality: 0.7,
       allowsEditing: false,
+      base64: true,
     });
 
     if (!result.canceled && result.assets[0]?.uri) {
-      await runOcr(result.assets[0].uri, 'camera');
+      await runOcr(result.assets[0].uri, 'camera', result.assets[0].base64 ?? undefined);
     }
   };
 
@@ -96,11 +113,12 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
     if (!cameraRef.current || busy) return;
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.85,
+        quality: 0.7,
         skipProcessing: false,
+        base64: true,
       });
       if (photo?.uri) {
-        await runOcr(photo.uri, 'camera');
+        await runOcr(photo.uri, 'camera', photo.base64 ?? undefined);
       }
     } catch {
       setError('Could not capture photo. Try the quick camera option instead.');
@@ -161,11 +179,11 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
 
   return (
     <SafeAreaView style={styles.safe}>
-      <View style={styles.panel}>
+      <ScrollView contentContainerStyle={styles.panel} keyboardShouldPersistTaps="handled">
         <Text style={styles.brand}>Scan</Text>
         <Text style={styles.title}>Read cash in / cash out</Text>
         <Text style={styles.body}>
-          Use the camera or upload a screenshot. We extract amount, fee, reference, and type from the receipt text.
+          Upload a GCash Express Send / cash in / cash out screenshot. Needs internet for OCR.
         </Text>
 
         {previewUri ? (
@@ -180,17 +198,8 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         <PrimaryButton
-          label="Open live camera"
-          onPress={async () => {
-            if (!permission?.granted) {
-              const res = await requestPermission();
-              if (!res.granted) {
-                await openDeviceCameraPicker();
-                return;
-              }
-            }
-            setMode('camera');
-          }}
+          label="Upload from gallery"
+          onPress={pickFromGallery}
           loading={busy}
           disabled={busy}
         />
@@ -202,14 +211,30 @@ export function ScanScreen({ onCancel, onParsed }: Props) {
           disabled={busy}
         />
         <PrimaryButton
-          label="Upload from gallery"
-          onPress={pickFromGallery}
+          label="Open live camera"
+          onPress={async () => {
+            if (!permission?.granted) {
+              const res = await requestPermission();
+              if (!res.granted) {
+                await openDeviceCameraPicker();
+                return;
+              }
+            }
+            setMode('camera');
+          }}
+          variant="secondary"
+          style={styles.gap}
+          disabled={busy}
+        />
+        <PrimaryButton
+          label="Use sample Express Send (₱200)"
+          onPress={useSampleReceipt}
           variant="secondary"
           style={styles.gap}
           disabled={busy}
         />
         <PrimaryButton label="Back" onPress={onCancel} variant="ghost" style={styles.gap} disabled={busy} />
-      </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -226,8 +251,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.paper,
   },
   panel: {
-    flex: 1,
     padding: spacing.lg,
+    paddingBottom: spacing.xxl,
   },
   brand: {
     fontFamily: 'Fraunces_700Bold',

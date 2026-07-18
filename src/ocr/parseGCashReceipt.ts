@@ -34,10 +34,14 @@ function detectType(text: string): TransactionType | null {
 
   if (
     /\bcash[\s-]?out\b/.test(lower) ||
+    /\bexpress\s*send\b/.test(lower) ||
+    /\bsent via gcash\b/.test(lower) ||
+    /\btotal amount sent\b/.test(lower) ||
     /\bsend money\b/.test(lower) ||
     /\btransfer(?:red)? to\b/.test(lower) ||
     /\bwithdrawal\b/.test(lower) ||
-    /\bpaid\b/.test(lower)
+    /\bpaid\b/.test(lower) ||
+    /\byou sent\b/.test(lower)
   ) {
     return 'cash_out';
   }
@@ -47,7 +51,8 @@ function detectType(text: string): TransactionType | null {
 
 function extractAmount(text: string): number | null {
   const patterns = [
-    /(?:amount|total amount|you sent|you received|transfer amount|cash in|cash out)[:\s]*[₱PhpPHP\s]*([\d,]+\.\d{2})/i,
+    /total amount sent[:\s]*[₱PhpPHP\s]*([\d,]+\.\d{2})/i,
+    /(?:amount|you sent|you received|transfer amount|cash in|cash out)[:\s]*[₱PhpPHP\s]*([\d,]+\.\d{2})/i,
     /[₱]\s*([\d,]+\.\d{2})/,
     /Php\s*([\d,]+\.\d{2})/i,
     /PHP\s*([\d,]+\.\d{2})/,
@@ -84,7 +89,9 @@ function extractFee(text: string): number | null {
 
 function extractReference(text: string): string | null {
   const patterns = [
+    /Ref\.?\s*No\.?\s*([0-9]{3,}(?:\s+[0-9]{2,})+)/i,
     /(?:ref(?:erence)?(?:\s*no\.?|#)?|transaction\s*(?:id|no\.?))[:\s#-]*([A-Z0-9][A-Z0-9\s-]{6,})/i,
+    /\b(\d{4}\s+\d{3}\s+\d{6})\b/,
     /\b(\d{4}\s?\d{4}\s?\d{4})\b/,
     /\b([0-9]{10,})\b/,
   ];
@@ -99,27 +106,44 @@ function extractReference(text: string): string | null {
   return null;
 }
 
+function extractPhone(text: string): string | null {
+  const match = text.match(/(\+63\s?\d{3}\s?\d{3}\s?\d{4}|\b09\d{2}\s?\d{3}\s?\d{4}\b)/);
+  return match?.[1]?.replace(/\s+/g, ' ').trim() ?? null;
+}
+
 function extractCounterparty(text: string): string | null {
+  const phone = extractPhone(text);
+
+  // Masked GCash name like HA•••E U. above the phone number
+  const maskedName = text.match(
+    /([A-Z]{1,3}[•·*.]{2,}[A-Z0-9 .,'-]{1,20})\s*(?:\n|\r)?\s*(?:\+63|09\d)/i,
+  );
+  if (maskedName?.[1]) {
+    const name = maskedName[1].trim();
+    return phone ? `${name} · ${phone}` : name;
+  }
+
   const patterns = [
-    /(?:to|from|sent to|received from|recipient|sender)[:\s]+([A-Za-z0-9 .,'-]{3,40})/i,
-    /(?:name)[:\s]+([A-Za-z .,'-]{3,40})/i,
+    /(?:to|from|sent to|received from|recipient|sender)[:\s]+([A-Za-z0-9 .,'•*-]{3,40})/i,
+    /(?:name)[:\s]+([A-Za-z .,'•*-]{3,40})/i,
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match?.[1]) {
       const value = match[1].split('\n')[0].trim();
-      if (value && !/php|amount|fee|gcash/i.test(value)) {
-        return value;
+      if (value && !/php|amount|fee|gcash|sent via/i.test(value)) {
+        return phone ? `${value} · ${phone}` : value;
       }
     }
   }
 
-  return null;
+  return phone;
 }
 
 function extractDate(text: string): string | null {
   const patterns = [
+    /((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\.?\s+\d{1,2},?\s+\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)?)/i,
     /(\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)?)/i,
     /(\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:\s+\d{1,2}:\d{2}(?::\d{2})?)?)/,
     /(\d{1,2}[-/]\d{1,2}[-/]\d{2,4}(?:\s+\d{1,2}:\d{2}(?::\d{2})?(?:\s*[AP]M)?)?)/i,
