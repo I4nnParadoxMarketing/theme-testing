@@ -28,9 +28,9 @@ export interface TransactionDraft {
 interface Props {
   initial: TransactionDraft;
   submitLabel: string;
-  onSubmit: (draft: TransactionDraft) => void;
+  onSubmit: (draft: TransactionDraft) => void | Promise<void>;
   onCancel: () => void;
-  onDelete?: () => void;
+  onDelete?: () => void | Promise<void>;
 }
 
 function toLocalInputValue(iso: string): string {
@@ -64,14 +64,23 @@ export function TransactionForm({
 }: Props) {
   const [draft, setDraft] = useState<TransactionDraft>(initial);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const update = <K extends keyof TransactionDraft>(key: K, value: TransactionDraft[K]) => {
     setDraft((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleSubmit = () => {
-    const amount = Number(draft.amount.replace(/,/g, ''));
-    const fee = Number(draft.fee.replace(/,/g, '') || '0');
+  const handleSubmit = async () => {
+    const amount = Number(
+      String(draft.amount)
+        .replace(/[₱PhpPHP,\s]/gi, '')
+        .trim(),
+    );
+    const fee = Number(
+      String(draft.fee || '0')
+        .replace(/[₱PhpPHP,\s]/gi, '')
+        .trim() || '0',
+    );
 
     if (!Number.isFinite(amount) || amount <= 0) {
       setError('Enter a valid amount greater than zero.');
@@ -83,11 +92,20 @@ export function TransactionForm({
     }
 
     setError(null);
-    onSubmit({
-      ...draft,
-      amount: String(amount),
-      fee: String(fee),
-    });
+    setSaving(true);
+    try {
+      await onSubmit({
+        ...draft,
+        amount: String(amount),
+        fee: String(fee),
+        occurredAt: draft.occurredAt || new Date().toISOString(),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not save transaction.';
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -195,10 +213,37 @@ export function TransactionForm({
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <PrimaryButton label={submitLabel} onPress={handleSubmit} style={styles.action} />
-      <PrimaryButton label="Cancel" onPress={onCancel} variant="secondary" style={styles.action} />
+      <PrimaryButton
+        label={submitLabel}
+        onPress={handleSubmit}
+        style={styles.action}
+        loading={saving}
+        disabled={saving}
+      />
+      <PrimaryButton
+        label="Cancel"
+        onPress={onCancel}
+        variant="secondary"
+        style={styles.action}
+        disabled={saving}
+      />
       {onDelete ? (
-        <PrimaryButton label="Delete" onPress={onDelete} variant="danger" style={styles.action} />
+        <PrimaryButton
+          label="Delete"
+          onPress={async () => {
+            setSaving(true);
+            try {
+              await onDelete();
+            } catch (err) {
+              const message = err instanceof Error ? err.message : 'Could not delete transaction.';
+              setError(message);
+              setSaving(false);
+            }
+          }}
+          variant="danger"
+          style={styles.action}
+          disabled={saving}
+        />
       ) : null}
     </ScrollView>
   );

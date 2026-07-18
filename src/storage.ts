@@ -3,17 +3,44 @@ import type { Transaction } from './types';
 
 const STORAGE_KEY = 'gcash_cashflow_transactions_v1';
 
+function sanitizeForStorage(transactions: Transaction[]): Transaction[] {
+  // Avoid blowing AsyncStorage with huge camera data URIs; keep short file/content URIs.
+  return transactions.map((item) => {
+    const imageUri =
+      item.imageUri &&
+      item.imageUri.length < 2048 &&
+      !item.imageUri.startsWith('data:image/')
+        ? item.imageUri
+        : undefined;
+
+    return {
+      ...item,
+      imageUri,
+      rawText: item.rawText?.slice(0, 4000),
+    };
+  });
+}
+
 export async function loadTransactions(): Promise<Transaction[]> {
   try {
     const raw = await AsyncStorage.getItem(STORAGE_KEY);
     if (!raw) return [];
     const parsed = JSON.parse(raw) as Transaction[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (item) =>
+        item &&
+        typeof item.id === 'string' &&
+        (item.type === 'cash_in' || item.type === 'cash_out') &&
+        typeof item.amount === 'number',
+    );
+  } catch (error) {
+    console.warn('Failed to load transactions', error);
     return [];
   }
 }
 
 export async function saveTransactions(transactions: Transaction[]): Promise<void> {
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+  const payload = sanitizeForStorage(transactions);
+  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
 }

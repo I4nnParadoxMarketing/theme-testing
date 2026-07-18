@@ -9,7 +9,7 @@ import { useTransactions } from '../context/TransactionsContext';
 import type { ScanResult } from './ScanScreen';
 import type { Transaction } from '../types';
 import { colors } from '../theme';
-import { v4 as uuidv4 } from 'uuid';
+import { createId } from '../utils/id';
 
 interface Props {
   mode: 'create' | 'edit' | 'from-scan';
@@ -30,7 +30,7 @@ function draftFromScan(scan: ScanResult): TransactionDraft {
     occurredAt: scan.parsed.occurredAt ?? new Date().toISOString(),
     source: scan.source,
     rawText: scan.parsed.rawText,
-    imageUri: scan.imageUri,
+    imageUri: scan.imageUri || undefined,
   };
 }
 
@@ -60,33 +60,38 @@ export function ReviewScreen({ mode, scanResult, transaction, onDone, onCancel }
   const handleSubmit = async (draft: TransactionDraft) => {
     const amount = Number(draft.amount);
     const fee = Number(draft.fee || 0);
+    const occurredAt = draft.occurredAt || new Date().toISOString();
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new Error('Enter a valid amount greater than zero.');
+    }
 
     if (mode === 'edit' && transaction) {
       await updateTransaction(transaction.id, {
         type: draft.type,
         amount,
-        fee,
+        fee: Number.isFinite(fee) ? fee : 0,
         reference: draft.reference.trim() || undefined,
         counterparty: draft.counterparty.trim() || undefined,
         note: draft.note.trim() || undefined,
-        occurredAt: draft.occurredAt,
+        occurredAt,
         rawText: draft.rawText,
-        imageUri: draft.imageUri,
+        imageUri: draft.imageUri || undefined,
       });
     } else {
       const next: Transaction = {
-        id: uuidv4(),
+        id: createId(),
         type: draft.type,
         amount,
-        fee,
+        fee: Number.isFinite(fee) ? fee : 0,
         reference: draft.reference.trim() || undefined,
         counterparty: draft.counterparty.trim() || undefined,
         note: draft.note.trim() || undefined,
-        occurredAt: draft.occurredAt,
+        occurredAt,
         createdAt: new Date().toISOString(),
-        source: draft.source,
+        source: draft.source || 'manual',
         rawText: draft.rawText,
-        imageUri: draft.imageUri,
+        imageUri: draft.imageUri || undefined,
       };
       await addTransaction(next);
     }

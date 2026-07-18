@@ -1,5 +1,6 @@
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -38,6 +39,14 @@ function computeSummary(transactions: Transaction[]): BalanceSummary {
   );
 }
 
+function sortTransactions(list: Transaction[]): Transaction[] {
+  return [...list].sort((a, b) => {
+    const aTime = Date.parse(a.occurredAt || a.createdAt) || 0;
+    const bTime = Date.parse(b.occurredAt || b.createdAt) || 0;
+    return bTime - aTime;
+  });
+}
+
 export function TransactionsProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [ready, setReady] = useState(false);
@@ -47,7 +56,7 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     (async () => {
       const stored = await loadTransactions();
       if (mounted) {
-        setTransactions(stored);
+        setTransactions(sortTransactions(stored));
         setReady(true);
       }
     })();
@@ -56,36 +65,55 @@ export function TransactionsProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const persist = async (next: Transaction[]) => {
-    setTransactions(next);
+  const addTransaction = useCallback(async (transaction: Transaction) => {
+    const current = await loadTransactions();
+    const next = sortTransactions([
+      transaction,
+      ...current.filter((item) => item.id !== transaction.id),
+    ]);
     await saveTransactions(next);
-  };
+    setTransactions(next);
+  }, []);
+
+  const updateTransaction = useCallback(async (id: string, patch: Partial<Transaction>) => {
+    const current = await loadTransactions();
+    const next = sortTransactions(
+      current.map((item) => (item.id === id ? { ...item, ...patch } : item)),
+    );
+    await saveTransactions(next);
+    setTransactions(next);
+  }, []);
+
+  const deleteTransaction = useCallback(async (id: string) => {
+    const current = await loadTransactions();
+    const next = current.filter((item) => item.id !== id);
+    await saveTransactions(next);
+    setTransactions(next);
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    await saveTransactions([]);
+    setTransactions([]);
+  }, []);
 
   const value = useMemo<TransactionsContextValue>(
     () => ({
       transactions,
       ready,
       summary: computeSummary(transactions),
-      addTransaction: async (transaction) => {
-        const next = [transaction, ...transactions].sort(
-          (a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt),
-        );
-        await persist(next);
-      },
-      updateTransaction: async (id, patch) => {
-        const next = transactions.map((item) =>
-          item.id === id ? { ...item, ...patch } : item,
-        );
-        await persist(next);
-      },
-      deleteTransaction: async (id) => {
-        await persist(transactions.filter((item) => item.id !== id));
-      },
-      clearAll: async () => {
-        await persist([]);
-      },
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      clearAll,
     }),
-    [transactions, ready],
+    [
+      transactions,
+      ready,
+      addTransaction,
+      updateTransaction,
+      deleteTransaction,
+      clearAll,
+    ],
   );
 
   return (
