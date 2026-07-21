@@ -170,6 +170,7 @@ a {
   line-height: 0.95;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+  color: #000000;
 }
 
 .brand-tagline {
@@ -335,7 +336,7 @@ a {
 }
 
 .inline-icon.warn {
-  color: var(--warn);
+  color: var(--accent);
 }
 
 .chart-wrap {
@@ -1087,12 +1088,4 @@ a {
     border-radius: 0;
     border: none;
   }
-}
-
-.brand-name {
-  color: #000000;
-}
-
-.inline-icon.warn {
-  color: var(--accent);
 }
