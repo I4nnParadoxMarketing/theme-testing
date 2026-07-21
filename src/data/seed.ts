@@ -4,6 +4,7 @@ import type { Product, Sale } from '../types';
 export const SEED_PRODUCTS: Product[] = [
   {
     id: 'p1',
+    image: '/products/hammer.svg',
     name: 'Claw Hammer 16oz',
     sku: 'TL-HM-16',
     category: 'Tools',
@@ -15,6 +16,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p2',
+    image: '/products/drill.svg',
     name: 'Cordless Drill 20V',
     sku: 'TL-DR-20',
     category: 'Tools',
@@ -26,6 +28,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p3',
+    image: '/products/screws.svg',
     name: 'Phillips Screws #8 x 1.5"',
     sku: 'FS-PS-815',
     category: 'Fasteners',
@@ -37,6 +40,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p4',
+    image: '/products/bolts.svg',
     name: 'Hex Bolts M8 x 40mm',
     sku: 'FS-HB-840',
     category: 'Fasteners',
@@ -48,6 +52,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p5',
+    image: '/products/wire.svg',
     name: 'THHN Wire 2.0mm 150m',
     sku: 'EL-TH-20',
     category: 'Electrical',
@@ -59,6 +64,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p6',
+    image: '/products/outlet.svg',
     name: 'Duplex Outlet 15A',
     sku: 'EL-OUT-15',
     category: 'Electrical',
@@ -70,6 +76,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p7',
+    image: '/products/elbow.svg',
     name: 'PVC Elbow 1/2"',
     sku: 'PL-EL-050',
     category: 'Plumbing',
@@ -81,6 +88,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p8',
+    image: '/products/valve.svg',
     name: 'Ball Valve 3/4"',
     sku: 'PL-BV-075',
     category: 'Plumbing',
@@ -92,6 +100,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p9',
+    image: '/products/paint.svg',
     name: 'Interior Latex White 1gal',
     sku: 'PT-LT-W1',
     category: 'Paint',
@@ -103,6 +112,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p10',
+    image: '/products/stud.svg',
     name: '2x4 Stud 8ft',
     sku: 'LB-24-08',
     category: 'Lumber',
@@ -114,6 +124,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p11',
+    image: '/products/plywood.svg',
     name: 'Plywood 4x8 1/2"',
     sku: 'LB-PLY-48',
     category: 'Lumber',
@@ -125,6 +136,7 @@ export const SEED_PRODUCTS: Product[] = [
   },
   {
     id: 'p12',
+    image: '/products/wrench.svg',
     name: 'Adjustable Wrench 10"',
     sku: 'TL-AW-10',
     category: 'Tools',

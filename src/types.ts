@@ -16,6 +16,8 @@ export interface Product {
   stock: number;
   reorderAt: number;
   unit: string;
+  /** Public path or compressed data URL */
+  image?: string;
 }
 
 export interface SaleItem {

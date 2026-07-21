@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ProductThumb } from '../components/ProductThumb';
 import { isValidPhMobile, money } from '../lib/format';
 import { openReceiptSms } from '../lib/receiptSms';
 import { useStore } from '../hooks/useStore';
@@ -85,8 +86,9 @@ export function RecordSaleSheet({ onClose }: Props) {
         <div className="sheet-body">
           <ul className="pick-list">
             {products.map((p) => (
-              <li key={p.id}>
-                <div>
+              <li key={p.id} className="pick-row">
+                <ProductThumb name={p.name} image={p.image} category={p.category} size="sm" />
+                <div className="pick-copy">
                   <strong>{p.name}</strong>
                   <span>
                     {money(p.price)} · {p.stock} in stock

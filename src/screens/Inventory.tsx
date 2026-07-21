@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { IconPlus, IconSearch } from '../components/Icons';
+import { ProductThumb } from '../components/ProductThumb';
 import { money } from '../lib/format';
 import { stockStatus } from '../lib/stats';
 import { CATEGORIES } from '../data/categories';
@@ -72,7 +73,8 @@ export function Inventory() {
           return (
             <li key={p.id} className={`inv-row rise-${Math.min(index + 1, 5)}`}>
               <button type="button" className="inv-main" onClick={() => setEditing(p)}>
-                <div>
+                <ProductThumb name={p.name} image={p.image} category={p.category} size="md" />
+                <div className="inv-copy">
                   <strong>{p.name}</strong>
                   <span>
                     {p.sku} · {p.category}

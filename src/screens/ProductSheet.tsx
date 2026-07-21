@@ -1,5 +1,7 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { CATEGORIES } from '../data/categories';
+import { ProductThumb } from '../components/ProductThumb';
+import { fileToProductImage } from '../lib/image';
 import { useStore } from '../hooks/useStore';
 import type { Category, Product } from '../types';
 
@@ -11,6 +13,7 @@ interface Props {
 export function ProductSheet({ product, onClose }: Props) {
   const { addProduct, updateProduct, adjustStock } = useStore();
   const isEdit = Boolean(product);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState(product?.name ?? '');
   const [sku, setSku] = useState(product?.sku ?? '');
@@ -20,8 +23,28 @@ export function ProductSheet({ product, onClose }: Props) {
   const [stock, setStock] = useState(String(product?.stock ?? '0'));
   const [reorderAt, setReorderAt] = useState(String(product?.reorderAt ?? '10'));
   const [unit, setUnit] = useState(product?.unit ?? 'ea');
+  const [image, setImage] = useState(product?.image ?? '');
   const [restock, setRestock] = useState('10');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function onPickImage(file: File | undefined) {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    setBusy(true);
+    setError('');
+    try {
+      const dataUrl = await fileToProductImage(file);
+      setImage(dataUrl);
+    } catch {
+      setError('Could not read that image. Try another photo.');
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function save() {
     const priceN = Number(price);
@@ -46,6 +69,7 @@ export function ProductSheet({ product, onClose }: Props) {
       stock: stockN,
       reorderAt: reorderN,
       unit: unit.trim() || 'ea',
+      image: image || undefined,
     };
 
     if (product) {
@@ -73,6 +97,37 @@ export function ProductSheet({ product, onClose }: Props) {
         </header>
 
         <div className="sheet-body form-grid">
+          <div className="image-picker">
+            <ProductThumb name={name || 'Product'} image={image || undefined} category={category} size="lg" />
+            <div className="image-picker-actions">
+              <p>Product photo</p>
+              <button
+                type="button"
+                className="secondary-btn"
+                disabled={busy}
+                onClick={() => fileRef.current?.click()}
+              >
+                {busy ? 'Processing…' : image ? 'Change photo' : 'Add photo'}
+              </button>
+              {image && (
+                <button type="button" className="ghost-btn" onClick={() => setImage('')}>
+                  Remove
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(e) => {
+                  void onPickImage(e.target.files?.[0]);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+          </div>
+
           <label>
             Name
             <input value={name} onChange={(e) => setName(e.target.value)} />
@@ -145,7 +200,7 @@ export function ProductSheet({ product, onClose }: Props) {
 
         <footer className="sheet-foot">
           {error && <p className="form-error">{error}</p>}
-          <button type="button" className="primary-btn" onClick={save}>
+          <button type="button" className="primary-btn" onClick={save} disabled={busy}>
             {isEdit ? 'Save changes' : 'Add to inventory'}
           </button>
         </footer>

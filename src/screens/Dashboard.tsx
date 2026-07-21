@@ -9,6 +9,7 @@ import {
   YAxis,
 } from 'recharts';
 import { IconAlert, IconBolt, IconChevron } from '../components/Icons';
+import { ProductThumb } from '../components/ProductThumb';
 import { money } from '../lib/format';
 import {
   inventoryValue,
@@ -143,7 +144,8 @@ export function Dashboard() {
               const status = stockStatus(p);
               return (
                 <li key={p.id} className={`alert-row status-${status}`}>
-                  <div>
+                  <ProductThumb name={p.name} image={p.image} category={p.category} size="sm" />
+                  <div className="alert-copy">
                     <strong>{p.name}</strong>
                     <span>
                       {p.sku} · reorder at {p.reorderAt}
@@ -164,16 +166,25 @@ export function Dashboard() {
           <h2>Top movers</h2>
         </div>
         <ul className="rank-list">
-          {stats.top.map((item, i) => (
-            <li key={item.productId}>
-              <span className="rank">{i + 1}</span>
-              <div>
-                <strong>{item.name}</strong>
-                <span>{item.qty} sold</span>
-              </div>
-              <em>{money(item.revenue)}</em>
-            </li>
-          ))}
+          {stats.top.map((item, i) => {
+            const product = products.find((p) => p.id === item.productId);
+            return (
+              <li key={item.productId}>
+                <span className="rank">{i + 1}</span>
+                <ProductThumb
+                  name={item.name}
+                  image={product?.image}
+                  category={product?.category}
+                  size="sm"
+                />
+                <div>
+                  <strong>{item.name}</strong>
+                  <span>{item.qty} sold</span>
+                </div>
+                <em>{money(item.revenue)}</em>
+              </li>
+            );
+          })}
         </ul>
       </section>
     </div>
