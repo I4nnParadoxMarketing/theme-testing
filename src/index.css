@@ -445,7 +445,7 @@ a {
   background: transparent;
   color: var(--ink-soft);
   padding: 7px 12px;
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 0.84rem;
   font-weight: 650;
   white-space: nowrap;
@@ -666,7 +666,7 @@ a {
   gap: 6px;
   padding: 8px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 10px;
   font-size: 0.86rem;
   font-weight: 650;
 }
