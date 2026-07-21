@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { IconPlus, IconSearch } from '../components/Icons';
+import { IconPlus, IconSearch, IconStar, IconStarFilled } from '../components/Icons';
 import { ProductThumb } from '../components/ProductThumb';
 import { money } from '../lib/format';
 import { stockStatus } from '../lib/stats';
@@ -9,16 +9,20 @@ import type { Category, Product } from '../types';
 import { ProductSheet } from './ProductSheet';
 
 export function Inventory() {
-  const { products, adjustStock } = useStore();
+  const { products, adjustStock, toggleFavorite } = useStore();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState<Category | 'All'>('All');
+  const [category, setCategory] = useState<Category | 'All' | 'Favorites'>('All');
   const [editing, setEditing] = useState<Product | null>(null);
   const [adding, setAdding] = useState(false);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return products
-      .filter((p) => (category === 'All' ? true : p.category === category))
+      .filter((p) => {
+        if (category === 'Favorites') return Boolean(p.favorite);
+        if (category === 'All') return true;
+        return p.category === category;
+      })
       .filter(
         (p) =>
           !q ||
@@ -26,7 +30,7 @@ export function Inventory() {
           p.sku.toLowerCase().includes(q) ||
           p.category.toLowerCase().includes(q),
       )
-      .sort((a, b) => a.name.localeCompare(b.name));
+      .sort((a, b) => Number(Boolean(b.favorite)) - Number(Boolean(a.favorite)) || a.name.localeCompare(b.name));
   }, [products, query, category]);
 
   return (
@@ -53,7 +57,7 @@ export function Inventory() {
       </label>
 
       <div className="filter-row scroll-x" role="tablist" aria-label="Category">
-        {(['All', ...CATEGORIES] as const).map((c) => (
+        {(['All', 'Favorites', ...CATEGORIES] as const).map((c) => (
           <button
             key={c}
             type="button"
@@ -87,6 +91,14 @@ export function Inventory() {
               <div className="inv-meta">
                 <span>{money(p.price)}</span>
                 <div className="qty-controls">
+                  <button
+                    type="button"
+                    className={`fav-btn${p.favorite ? ' on' : ''}`}
+                    aria-label={p.favorite ? `Unfavorite ${p.name}` : `Favorite ${p.name}`}
+                    onClick={() => toggleFavorite(p.id)}
+                  >
+                    {p.favorite ? <IconStarFilled size={16} /> : <IconStar size={16} />}
+                  </button>
                   <button type="button" aria-label={`Decrease ${p.name}`} onClick={() => adjustStock(p.id, -1)}>
                     −
                   </button>

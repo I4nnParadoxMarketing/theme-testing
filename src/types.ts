@@ -18,6 +18,7 @@ export interface Product {
   unit: string;
   /** Public path or compressed data URL */
   image?: string;
+  favorite?: boolean;
 }
 
 export interface SaleItem {
@@ -38,11 +39,31 @@ export interface Sale {
   customerName?: string;
   customerPhone?: string;
   note?: string;
+  referenceNo?: string;
+  voided?: boolean;
+  voidedAt?: string;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  note?: string;
+  createdAt: string;
+}
+
+export interface StoreSettings {
+  storeName: string;
+  address: string;
+  phone: string;
+  receiptFooter: string;
 }
 
 export interface AppState {
   products: Product[];
   sales: Sale[];
+  customers: Customer[];
+  settings: StoreSettings;
 }
 
 export interface RecordSaleInput {
@@ -51,4 +72,5 @@ export interface RecordSaleInput {
   customerName?: string;
   customerPhone?: string;
   note?: string;
+  referenceNo?: string;
 }

@@ -4,10 +4,13 @@ Mobile-first hardware store ops app for monitoring **sales**, managing **invento
 
 ## Features
 
-- **Dashboard** — today’s till, 7-day revenue chart, low-stock alerts, top movers
-- **Sales** — filter by today / 7 days / all, record multi-item sales (Cash, GCash, Card, Bank transfer)
-- **SMS receipts** — send a peso receipt to the client’s PH mobile via the phone Messages app
-- **Inventory** — search & category filters, quick stock adjust, add/edit products, restock
+- **Dashboard** — today’s till, profit estimate, chart, low-stock alerts, top movers
+- **Sales** — search, favorites quick-pick, Cash/GCash/Card/Bank transfer, void sale, GCash ref
+- **SMS receipts** — send peso receipts to PH mobiles; auto-save customers
+- **Inventory** — photos, favorites, search & category filters, restock
+- **Customers** — saved clients for quick SMS
+- **Reports** — sales/profit by period, payment mix, share report & reorder list
+- **Settings** — store name/address for receipts, reset demo data
 
 Currency is **PHP (₱)**. Data persists in `localStorage` with seeded demo hardware SKUs.
 

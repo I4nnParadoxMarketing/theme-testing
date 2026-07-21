@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ProductThumb } from '../components/ProductThumb';
 import { isValidPhMobile, money } from '../lib/format';
 import { openReceiptSms } from '../lib/receiptSms';
+import { favoriteProducts } from '../lib/stats';
 import { useStore } from '../hooks/useStore';
 import type { PaymentMethod, SaleItem } from '../types';
 
@@ -12,12 +13,17 @@ interface Props {
 const PAYMENTS: PaymentMethod[] = ['Cash', 'GCash', 'Card', 'Bank transfer'];
 
 export function RecordSaleSheet({ onClose }: Props) {
-  const { products, recordSale } = useStore();
+  const { products, customers, settings, recordSale } = useStore();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [payment, setPayment] = useState<PaymentMethod>('Cash');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  const [referenceNo, setReferenceNo] = useState('');
   const [error, setError] = useState('');
+  const [showAll, setShowAll] = useState(false);
+
+  const favorites = favoriteProducts(products);
+  const visibleProducts = showAll || favorites.length === 0 ? products : favorites;
 
   const lines = useMemo(() => {
     return products
@@ -32,6 +38,13 @@ export function RecordSaleSheet({ onClose }: Props) {
       const next = Math.max(0, Math.min(max, (prev[id] ?? 0) + delta));
       return { ...prev, [id]: next };
     });
+  }
+
+  function pickCustomer(id: string) {
+    const c = customers.find((x) => x.id === id);
+    if (!c) return;
+    setCustomerName(c.name);
+    setCustomerPhone(c.phone);
   }
 
   function buildItems(): SaleItem[] {
@@ -58,11 +71,12 @@ export function RecordSaleSheet({ onClose }: Props) {
       paymentMethod: payment,
       customerName,
       customerPhone,
+      referenceNo: payment === 'GCash' || payment === 'Bank transfer' ? referenceNo : undefined,
     });
     if (!sale) return;
 
     if (sendSms) {
-      openReceiptSms(customerPhone, sale);
+      openReceiptSms(customerPhone, sale, settings);
     }
     onClose();
   }
@@ -84,8 +98,27 @@ export function RecordSaleSheet({ onClose }: Props) {
         </header>
 
         <div className="sheet-body">
+          {favorites.length > 0 && (
+            <div className="filter-row">
+              <button
+                type="button"
+                className={`chip${!showAll ? ' active' : ''}`}
+                onClick={() => setShowAll(false)}
+              >
+                Favorites
+              </button>
+              <button
+                type="button"
+                className={`chip${showAll ? ' active' : ''}`}
+                onClick={() => setShowAll(true)}
+              >
+                All items
+              </button>
+            </div>
+          )}
+
           <ul className="pick-list">
-            {products.map((p) => (
+            {visibleProducts.map((p) => (
               <li key={p.id} className="pick-row">
                 <ProductThumb name={p.name} image={p.image} category={p.category} size="sm" />
                 <div className="pick-copy">
@@ -117,6 +150,24 @@ export function RecordSaleSheet({ onClose }: Props) {
           </ul>
 
           <div className="customer-fields">
+            {customers.length > 0 && (
+              <label>
+                Saved customer
+                <select
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value) pickCustomer(e.target.value);
+                  }}
+                >
+                  <option value="">Select client…</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} · {c.phone}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label>
               Customer name
               <input
@@ -138,6 +189,17 @@ export function RecordSaleSheet({ onClose }: Props) {
                 autoComplete="tel"
               />
             </label>
+            {(payment === 'GCash' || payment === 'Bank transfer') && (
+              <label>
+                Reference no.
+                <input
+                  type="text"
+                  placeholder="Optional GCash / transfer ref"
+                  value={referenceNo}
+                  onChange={(e) => setReferenceNo(e.target.value)}
+                />
+              </label>
+            )}
           </div>
 
           <fieldset className="pay-field">

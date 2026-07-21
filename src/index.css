@@ -121,8 +121,8 @@ a {
   z-index: 5;
   height: var(--nav-h);
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+  grid-template-columns: repeat(4, 1fr);
+  padding: 8px 6px calc(8px + env(safe-area-inset-bottom));
   background: rgba(28, 35, 40, 0.94);
   color: #d6dde1;
   backdrop-filter: blur(10px);
@@ -533,7 +533,9 @@ a {
 }
 
 .customer-fields input,
-.stacked-label input {
+.customer-fields select,
+.stacked-label input,
+.stacked-label select {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -542,6 +544,120 @@ a {
   letter-spacing: normal;
   font-weight: 500;
   color: var(--ink);
+}
+
+.menu-list,
+.customer-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-link,
+.customer-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 14px 0;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+
+.menu-link strong,
+.customer-main strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.menu-link span,
+.customer-main span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.customer-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.customer-row .customer-main {
+  border-bottom: none;
+  flex: 1;
+}
+
+.sale-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.void-btn {
+  font-size: 0.78rem;
+  padding: 8px 8px;
+}
+
+.sale-row.voided {
+  opacity: 0.55;
+}
+
+.sale-row.voided .sale-main strong {
+  text-decoration: line-through;
+}
+
+.fav-btn {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.fav-btn.on {
+  color: var(--accent);
+  border-color: rgba(196, 125, 0, 0.35);
+}
+
+.quick-links,
+.action-stack,
+.form-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quick-links {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.quick-link {
+  flex: 1;
+  min-width: 90px;
+  padding: 12px 10px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.88rem;
+  background: rgba(255, 250, 243, 0.7);
+}
+
+.secondary-btn.danger,
+.ghost-btn.danger {
+  color: var(--critical);
+}
+
+.secondary-btn.full.danger {
+  border: 1px solid rgba(155, 28, 28, 0.25);
+  background: rgba(155, 28, 28, 0.06);
 }
 
 .sms-hint {

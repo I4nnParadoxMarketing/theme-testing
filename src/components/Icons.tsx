@@ -25,6 +25,16 @@ export function IconInventory({ size = 22, className }: IconProps) {
   );
 }
 
+export function IconMore({ size = 22, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <circle cx="5" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+      <circle cx="19" cy="12" r="1.8" fill="currentColor" />
+    </svg>
+  );
+}
+
 export function IconPlus({ size = 20, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
@@ -63,6 +73,30 @@ export function IconBolt({ size = 28, className }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
       <path d="M13 2L4 14h7l-1 8 10-14h-7l0-6z" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconStar({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path
+        d="M12 3.5l2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8L6.7 20l1-6L3.3 9.9l6-.9L12 3.5z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconStarFilled({ size = 18, className }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" className={className} aria-hidden>
+      <path
+        d="M12 3.5l2.7 5.5 6 .9-4.4 4.3 1 6-5.3-2.8L6.7 20l1-6L3.3 9.9l6-.9L12 3.5z"
+        fill="currentColor"
+      />
     </svg>
   );
 }

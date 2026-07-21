@@ -1,6 +1,6 @@
 import { format, isSameDay, subDays } from 'date-fns';
 import { useMemo, useState } from 'react';
-import { IconPlus } from '../components/Icons';
+import { IconPlus, IconSearch } from '../components/Icons';
 import { isValidPhMobile, money } from '../lib/format';
 import { openReceiptSms } from '../lib/receiptSms';
 import { sumSales } from '../lib/stats';
@@ -23,15 +23,29 @@ function filterSales(sales: Sale[], filter: Filter): Sale[] {
 }
 
 export function Sales() {
-  const { sales, updateSaleCustomer } = useStore();
+  const { sales, settings, updateSaleCustomer, voidSale } = useStore();
   const [filter, setFilter] = useState<Filter>('today');
+  const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [smsSale, setSmsSale] = useState<Sale | null>(null);
   const [phoneDraft, setPhoneDraft] = useState('');
   const [smsError, setSmsError] = useState('');
 
-  const filtered = useMemo(() => filterSales(sales, filter), [sales, filter]);
-  const total = sumSales(filtered);
+  const filtered = useMemo(() => {
+    const base = filterSales(sales, filter);
+    const q = query.trim().toLowerCase();
+    if (!q) return base;
+    return base.filter(
+      (s) =>
+        s.customerName?.toLowerCase().includes(q) ||
+        s.customerPhone?.includes(q) ||
+        s.paymentMethod.toLowerCase().includes(q) ||
+        s.referenceNo?.toLowerCase().includes(q) ||
+        s.items.some((i) => i.name.toLowerCase().includes(q)),
+    );
+  }, [sales, filter, query]);
+
+  const total = sumSales(filtered.filter((s) => !s.voided));
 
   function startSms(sale: Sale) {
     setSmsSale(sale);
@@ -50,7 +64,7 @@ export function Sales() {
       customerPhone: phoneDraft,
     });
     const updated = { ...smsSale, customerPhone: phoneDraft.trim() };
-    openReceiptSms(phoneDraft, updated);
+    openReceiptSms(phoneDraft, updated, settings);
     setSmsSale(null);
   }
 
@@ -66,6 +80,16 @@ export function Sales() {
           <span>Sale</span>
         </button>
       </header>
+
+      <label className="search-field">
+        <IconSearch />
+        <input
+          type="search"
+          placeholder="Search item, client, GCash ref"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
 
       <div className="filter-row" role="tablist" aria-label="Sales period">
         {(
@@ -89,7 +113,7 @@ export function Sales() {
       </div>
 
       <div className="summary-bar rise-1">
-        <span>{filtered.length} tickets</span>
+        <span>{filtered.filter((s) => !s.voided).length} tickets</span>
         <strong>{money(total)}</strong>
       </div>
 
@@ -98,17 +122,39 @@ export function Sales() {
           <li className="empty-block">No sales in this period. Record one to start tracking.</li>
         ) : (
           filtered.map((sale, index) => (
-            <li key={sale.id} className={`sale-row rise-${Math.min(index + 1, 5)}`}>
+            <li
+              key={sale.id}
+              className={`sale-row rise-${Math.min(index + 1, 5)}${sale.voided ? ' voided' : ''}`}
+            >
               <div className="sale-main">
-                <strong>{money(sale.total)}</strong>
+                <strong>
+                  {money(sale.total)}
+                  {sale.voided ? ' · VOID' : ''}
+                </strong>
                 <span>
                   {format(new Date(sale.createdAt), 'MMM d · h:mm a')} · {sale.paymentMethod}
                   {sale.customerName ? ` · ${sale.customerName}` : ''}
+                  {sale.referenceNo ? ` · Ref ${sale.referenceNo}` : ''}
                 </span>
               </div>
-              <button type="button" className="sms-btn" onClick={() => startSms(sale)}>
-                SMS
-              </button>
+              {!sale.voided && (
+                <div className="sale-actions">
+                  <button type="button" className="sms-btn" onClick={() => startSms(sale)}>
+                    SMS
+                  </button>
+                  <button
+                    type="button"
+                    className="ghost-btn void-btn"
+                    onClick={() => {
+                      if (window.confirm('Void this sale and return items to stock?')) {
+                        voidSale(sale.id);
+                      }
+                    }}
+                  >
+                    Void
+                  </button>
+                </div>
+              )}
               <p className="sale-items">
                 {sale.items.map((i) => `${i.quantity}× ${i.name}`).join(' · ')}
                 {sale.customerPhone ? ` · ${sale.customerPhone}` : ''}
@@ -137,7 +183,7 @@ export function Sales() {
             </header>
             <div className="sheet-body">
               <p className="sms-hint">
-                Opens your Messages app with a Gaba Hardware receipt for{' '}
+                Opens Messages with a {settings.storeName} receipt for{' '}
                 <strong>{money(smsSale.total)}</strong>.
               </p>
               <label className="stacked-label">

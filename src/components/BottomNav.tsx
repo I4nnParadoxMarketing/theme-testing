@@ -1,10 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { IconDashboard, IconInventory, IconSales } from './Icons';
+import { IconDashboard, IconInventory, IconMore, IconSales } from './Icons';
 
 const links = [
-  { to: '/', label: 'Dashboard', icon: IconDashboard, end: true },
+  { to: '/', label: 'Home', icon: IconDashboard, end: true },
   { to: '/sales', label: 'Sales', icon: IconSales },
-  { to: '/inventory', label: 'Inventory', icon: IconInventory },
+  { to: '/inventory', label: 'Stock', icon: IconInventory },
+  { to: '/more', label: 'More', icon: IconMore },
 ] as const;
 
 export function BottomNav() {

@@ -14,6 +14,7 @@ import { money } from '../lib/format';
 import {
   inventoryValue,
   lowStockProducts,
+  profitForSales,
   stockStatus,
   sumSales,
   todaySales,
@@ -23,7 +24,7 @@ import {
 import { useStore } from '../hooks/useStore';
 
 export function Dashboard() {
-  const { products, sales } = useStore();
+  const { products, sales, settings } = useStore();
 
   const stats = useMemo(() => {
     const today = todaySales(sales);
@@ -37,6 +38,7 @@ export function Dashboard() {
     return {
       todayTotal: sumSales(today),
       todayCount: today.length,
+      todayProfit: profitForSales(today, products),
       weekTotal,
       series,
       low: lowStockProducts(products),
@@ -53,7 +55,7 @@ export function Dashboard() {
           <span className="brand-mark">
             <IconBolt size={22} />
           </span>
-          <h1 className="brand-name">Gaba Hardware</h1>
+          <h1 className="brand-name">{settings.storeName}</h1>
         </div>
         <p className="brand-tagline">Floor ops for tools, stock, and today&apos;s till.</p>
       </header>
@@ -65,9 +67,9 @@ export function Dashboard() {
           <span className="kpi-meta">{stats.todayCount} sales</span>
         </div>
         <div className="kpi rise-2">
-          <span className="kpi-label">7-day</span>
-          <strong className="kpi-value">{money(stats.weekTotal)}</strong>
-          <span className="kpi-meta">revenue</span>
+          <span className="kpi-label">Profit</span>
+          <strong className="kpi-value">{money(stats.todayProfit)}</strong>
+          <span className="kpi-meta">today est.</span>
         </div>
         <div className="kpi rise-3">
           <span className="kpi-label">Stock</span>
@@ -159,6 +161,23 @@ export function Dashboard() {
             })}
           </ul>
         )}
+      </section>
+
+      <section className="panel rise-3">
+        <div className="panel-head">
+          <h2>Quick links</h2>
+        </div>
+        <div className="quick-links">
+          <Link to="/reports" className="quick-link">
+            Reports
+          </Link>
+          <Link to="/customers" className="quick-link">
+            Customers
+          </Link>
+          <Link to="/sales" className="quick-link">
+            New sale
+          </Link>
+        </div>
       </section>
 
       <section className="panel rise-4">
