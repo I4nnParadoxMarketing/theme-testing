@@ -90,28 +90,28 @@ export function Dashboard() {
             <AreaChart data={stats.series} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
               <defs>
                 <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#F0A202" stopOpacity={0.45} />
-                  <stop offset="100%" stopColor="#F0A202" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#E10600" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#E10600" stopOpacity={0.02} />
                 </linearGradient>
               </defs>
               <XAxis
                 dataKey="label"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: '#5C6B73', fontSize: 11, fontFamily: 'Figtree' }}
+                tick={{ fill: '#000000', fontSize: 11, fontFamily: 'Figtree' }}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tick={{ fill: '#5C6B73', fontSize: 11, fontFamily: 'Figtree' }}
+                tick={{ fill: '#666666', fontSize: 11, fontFamily: 'Figtree' }}
                 width={36}
               />
               <Tooltip
                 contentStyle={{
-                  background: '#1C2328',
-                  border: 'none',
-                  borderRadius: 8,
-                  color: '#F4F6F7',
+                  background: '#000000',
+                  border: '2px solid #FF6A00',
+                  borderRadius: 0,
+                  color: '#FFFFFF',
                   fontFamily: 'Figtree',
                   fontSize: 12,
                 }}
@@ -120,7 +120,7 @@ export function Dashboard() {
               <Area
                 type="monotone"
                 dataKey="total"
-                stroke="#C47D00"
+                stroke="#E10600"
                 strokeWidth={2.4}
                 fill="url(#salesFill)"
               />
