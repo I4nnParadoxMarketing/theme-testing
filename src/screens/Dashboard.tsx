@@ -52,7 +52,7 @@ export function Dashboard() {
           <span className="brand-mark">
             <IconBolt size={22} />
           </span>
-          <h1 className="brand-name">BoltYard</h1>
+          <h1 className="brand-name">Gaba Hardware</h1>
         </div>
         <p className="brand-tagline">Floor ops for tools, stock, and today&apos;s till.</p>
       </header>

@@ -10,7 +10,7 @@ import { SEED_PRODUCTS, SEED_SALES } from '../data/seed';
 import { uid } from '../lib/format';
 import type { Product, Sale, SaleItem } from '../types';
 
-const STORAGE_KEY = 'boltyard-store-v1';
+const STORAGE_KEY = 'gaba-hardware-store-v1';
 
 interface StoreContextValue {
   products: Product[];

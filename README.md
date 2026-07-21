@@ -1,4 +1,4 @@
-# BoltYard
+# Gaba Hardware
 
 Mobile-first hardware store ops app for monitoring **sales**, managing **inventory**, and checking a live **dashboard**.
 
