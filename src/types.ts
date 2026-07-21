@@ -25,16 +25,28 @@ export interface SaleItem {
   unitPrice: number;
 }
 
+export type PaymentMethod = 'Cash' | 'GCash' | 'Card' | 'Bank transfer';
+
 export interface Sale {
   id: string;
   createdAt: string;
   items: SaleItem[];
   total: number;
-  paymentMethod: 'Cash' | 'Card' | 'Transfer';
+  paymentMethod: PaymentMethod;
+  customerName?: string;
+  customerPhone?: string;
   note?: string;
 }
 
 export interface AppState {
   products: Product[];
   sales: Sale[];
+}
+
+export interface RecordSaleInput {
+  items: SaleItem[];
+  paymentMethod: PaymentMethod;
+  customerName?: string;
+  customerPhone?: string;
+  note?: string;
 }

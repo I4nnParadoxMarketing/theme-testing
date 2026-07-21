@@ -8,17 +8,21 @@ import {
 } from 'react';
 import { SEED_PRODUCTS, SEED_SALES } from '../data/seed';
 import { uid } from '../lib/format';
-import type { Product, Sale, SaleItem } from '../types';
+import type { Product, RecordSaleInput, Sale } from '../types';
 
-const STORAGE_KEY = 'gaba-hardware-store-v1';
+const STORAGE_KEY = 'gaba-hardware-store-v2';
 
 interface StoreContextValue {
   products: Product[];
   sales: Sale[];
-  recordSale: (items: SaleItem[], paymentMethod: Sale['paymentMethod'], note?: string) => void;
+  recordSale: (input: RecordSaleInput) => Sale | null;
   adjustStock: (productId: string, delta: number) => void;
   updateProduct: (productId: string, patch: Partial<Product>) => void;
   addProduct: (input: Omit<Product, 'id'>) => void;
+  updateSaleCustomer: (
+    saleId: string,
+    patch: Pick<Sale, 'customerName' | 'customerPhone'>,
+  ) => void;
   resetDemo: () => void;
 }
 
@@ -50,25 +54,28 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     () => ({
       products,
       sales,
-      recordSale: (items, paymentMethod, note) => {
-        if (!items.length) return;
-        const total = items.reduce((acc, i) => acc + i.quantity * i.unitPrice, 0);
+      recordSale: (input) => {
+        if (!input.items.length) return null;
+        const total = input.items.reduce((acc, i) => acc + i.quantity * i.unitPrice, 0);
         const sale: Sale = {
           id: uid('sale'),
           createdAt: new Date().toISOString(),
-          items,
+          items: input.items,
           total: Math.round(total * 100) / 100,
-          paymentMethod,
-          note,
+          paymentMethod: input.paymentMethod,
+          customerName: input.customerName?.trim() || undefined,
+          customerPhone: input.customerPhone?.trim() || undefined,
+          note: input.note,
         };
         setSales((prev) => [sale, ...prev]);
         setProducts((prev) =>
           prev.map((p) => {
-            const line = items.find((i) => i.productId === p.id);
+            const line = input.items.find((i) => i.productId === p.id);
             if (!line) return p;
             return { ...p, stock: Math.max(0, p.stock - line.quantity) };
           }),
         );
+        return sale;
       },
       adjustStock: (productId, delta) => {
         setProducts((prev) =>
@@ -85,6 +92,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       addProduct: (input) => {
         const product: Product = { ...input, id: uid('prod') };
         setProducts((prev) => [product, ...prev]);
+      },
+      updateSaleCustomer: (saleId, patch) => {
+        setSales((prev) =>
+          prev.map((s) =>
+            s.id === saleId
+              ? {
+                  ...s,
+                  customerName: patch.customerName?.trim() || undefined,
+                  customerPhone: patch.customerPhone?.trim() || undefined,
+                }
+              : s,
+          ),
+        );
       },
       resetDemo: () => {
         setProducts(SEED_PRODUCTS);

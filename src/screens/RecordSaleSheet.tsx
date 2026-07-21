@@ -1,16 +1,21 @@
 import { useMemo, useState } from 'react';
-import { money } from '../lib/format';
+import { isValidPhMobile, money } from '../lib/format';
+import { openReceiptSms } from '../lib/receiptSms';
 import { useStore } from '../hooks/useStore';
-import type { Sale, SaleItem } from '../types';
+import type { PaymentMethod, SaleItem } from '../types';
 
 interface Props {
   onClose: () => void;
 }
 
+const PAYMENTS: PaymentMethod[] = ['Cash', 'GCash', 'Card', 'Bank transfer'];
+
 export function RecordSaleSheet({ onClose }: Props) {
   const { products, recordSale } = useStore();
   const [qty, setQty] = useState<Record<string, number>>({});
-  const [payment, setPayment] = useState<Sale['paymentMethod']>('Cash');
+  const [payment, setPayment] = useState<PaymentMethod>('Cash');
+  const [customerName, setCustomerName] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
   const [error, setError] = useState('');
 
   const lines = useMemo(() => {
@@ -28,18 +33,36 @@ export function RecordSaleSheet({ onClose }: Props) {
     });
   }
 
-  function submit() {
-    if (!lines.length) {
-      setError('Add at least one item.');
-      return;
-    }
-    const items: SaleItem[] = lines.map(({ product, quantity }) => ({
+  function buildItems(): SaleItem[] {
+    return lines.map(({ product, quantity }) => ({
       productId: product.id,
       name: product.name,
       quantity,
       unitPrice: product.price,
     }));
-    recordSale(items, payment);
+  }
+
+  function submit(sendSms: boolean) {
+    if (!lines.length) {
+      setError('Add at least one item.');
+      return;
+    }
+    if (sendSms && !isValidPhMobile(customerPhone)) {
+      setError('Enter a valid PH mobile (e.g. 09171234567) to send SMS.');
+      return;
+    }
+
+    const sale = recordSale({
+      items: buildItems(),
+      paymentMethod: payment,
+      customerName,
+      customerPhone,
+    });
+    if (!sale) return;
+
+    if (sendSms) {
+      openReceiptSms(customerPhone, sale);
+    }
     onClose();
   }
 
@@ -91,9 +114,33 @@ export function RecordSaleSheet({ onClose }: Props) {
             ))}
           </ul>
 
+          <div className="customer-fields">
+            <label>
+              Customer name
+              <input
+                type="text"
+                placeholder="Optional"
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                autoComplete="name"
+              />
+            </label>
+            <label>
+              Mobile (SMS receipt)
+              <input
+                type="tel"
+                inputMode="tel"
+                placeholder="0917 123 4567"
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                autoComplete="tel"
+              />
+            </label>
+          </div>
+
           <fieldset className="pay-field">
             <legend>Payment</legend>
-            {(['Cash', 'Card', 'Transfer'] as const).map((method) => (
+            {PAYMENTS.map((method) => (
               <label key={method} className={`pay-option${payment === method ? ' active' : ''}`}>
                 <input
                   type="radio"
@@ -114,8 +161,11 @@ export function RecordSaleSheet({ onClose }: Props) {
             <span>Total</span>
             <strong>{money(total)}</strong>
           </div>
-          <button type="button" className="primary-btn" onClick={submit}>
-            Save sale
+          <button type="button" className="primary-btn" onClick={() => submit(true)}>
+            Save & send SMS
+          </button>
+          <button type="button" className="secondary-btn full" onClick={() => submit(false)}>
+            Save only
           </button>
         </footer>
       </div>

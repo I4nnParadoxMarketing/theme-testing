@@ -488,6 +488,67 @@ a {
 
 .sale-main {
   flex: 1;
+  min-width: 0;
+}
+
+.sms-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: #fff8ef;
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.customer-fields {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.customer-fields label,
+.stacked-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.customer-fields input,
+.stacked-label input {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  text-transform: none;
+  letter-spacing: normal;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.sms-hint {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
+.secondary-btn.full {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.sheet-compact {
+  max-height: 70%;
 }
 
 .search-field {
