@@ -103,12 +103,12 @@ export function Customers() {
             <button
               type="button"
               className="sms-btn"
-              onClick={() =>
-                openSms(
+              onClick={() => {
+                void openSms(
                   c.phone,
                   `Kumusta ${c.name}! This is ${settings.storeName}. Salamat po.`,
-                )
-              }
+                );
+              }}
             >
               SMS
             </button>

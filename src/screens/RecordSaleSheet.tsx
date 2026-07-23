@@ -1,19 +1,20 @@
 import { useMemo, useState } from 'react';
 import { ProductThumb } from '../components/ProductThumb';
-import { isValidPhMobile, money } from '../lib/format';
-import { openReceiptSms } from '../lib/receiptSms';
+import { money } from '../lib/format';
 import { favoriteProducts } from '../lib/stats';
 import { useStore } from '../hooks/useStore';
-import type { PaymentMethod, SaleItem } from '../types';
+import type { PaymentMethod, Sale, SaleItem } from '../types';
 
 interface Props {
   onClose: () => void;
+  /** Called after save when cashier chose Send SMS — parent should open receipt sheet. */
+  onSavedForSms?: (sale: Sale) => void;
 }
 
 const PAYMENTS: PaymentMethod[] = ['Cash', 'GCash', 'Card', 'Bank transfer'];
 
-export function RecordSaleSheet({ onClose }: Props) {
-  const { products, customers, settings, recordSale } = useStore();
+export function RecordSaleSheet({ onClose, onSavedForSms }: Props) {
+  const { products, customers, recordSale } = useStore();
   const [qty, setQty] = useState<Record<string, number>>({});
   const [payment, setPayment] = useState<PaymentMethod>('Cash');
   const [customerName, setCustomerName] = useState('');
@@ -61,10 +62,6 @@ export function RecordSaleSheet({ onClose }: Props) {
       setError('Add at least one item.');
       return;
     }
-    if (sendSms && !isValidPhMobile(customerPhone)) {
-      setError('Enter a valid PH mobile (e.g. 09171234567) to send SMS.');
-      return;
-    }
 
     const sale = recordSale({
       items: buildItems(),
@@ -76,7 +73,8 @@ export function RecordSaleSheet({ onClose }: Props) {
     if (!sale) return;
 
     if (sendSms) {
-      openReceiptSms(customerPhone, sale, settings);
+      onSavedForSms?.(sale);
+      return;
     }
     onClose();
   }

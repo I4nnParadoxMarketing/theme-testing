@@ -53,7 +53,7 @@ export function Reports() {
   function smsReorder() {
     if (!stats.low.length) return;
     const text = buildReorderMessage(stats.low, settings);
-    openSms(undefined, text);
+    void openSms(undefined, text);
   }
 
   return (

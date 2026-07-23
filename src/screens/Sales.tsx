@@ -1,9 +1,9 @@
 import { format, isSameDay, subDays } from 'date-fns';
 import { useMemo, useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
+import { SendReceiptSheet } from '../components/SendReceiptSheet';
 import { IconPlus, IconSearch } from '../components/Icons';
-import { isValidPhMobile, money } from '../lib/format';
-import { openReceiptSms } from '../lib/receiptSms';
+import { money } from '../lib/format';
 import { sumSales } from '../lib/stats';
 import { useStore } from '../hooks/useStore';
 import type { Sale } from '../types';
@@ -24,14 +24,13 @@ function filterSales(sales: Sale[], filter: Filter): Sale[] {
 }
 
 export function Sales() {
-  const { sales, settings, updateSaleCustomer, voidSale } = useStore();
+  const { sales, voidSale } = useStore();
   const { can } = useAuth();
   const [filter, setFilter] = useState<Filter>('today');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
   const [smsSale, setSmsSale] = useState<Sale | null>(null);
-  const [phoneDraft, setPhoneDraft] = useState('');
-  const [smsError, setSmsError] = useState('');
+  const [pendingSmsSale, setPendingSmsSale] = useState<Sale | null>(null);
 
   const filtered = useMemo(() => {
     const base = filterSales(sales, filter);
@@ -48,27 +47,7 @@ export function Sales() {
   }, [sales, filter, query]);
 
   const total = sumSales(filtered.filter((s) => !s.voided));
-
-  function startSms(sale: Sale) {
-    setSmsSale(sale);
-    setPhoneDraft(sale.customerPhone ?? '');
-    setSmsError('');
-  }
-
-  function confirmSms() {
-    if (!smsSale) return;
-    if (!isValidPhMobile(phoneDraft)) {
-      setSmsError('Enter a valid PH mobile (e.g. 09171234567).');
-      return;
-    }
-    updateSaleCustomer(smsSale.id, {
-      customerName: smsSale.customerName,
-      customerPhone: phoneDraft,
-    });
-    const updated = { ...smsSale, customerPhone: phoneDraft.trim() };
-    openReceiptSms(phoneDraft, updated, settings);
-    setSmsSale(null);
-  }
+  const activeSms = smsSale ?? pendingSmsSale;
 
   return (
     <div className="screen fade-in">
@@ -140,15 +119,23 @@ export function Sales() {
                   {sale.referenceNo ? ` · Ref ${sale.referenceNo}` : ''}
                 </span>
               </div>
+              <p className="sale-items">
+                {sale.items.map((i) => `${i.quantity}× ${i.name}`).join(' · ')}
+                {sale.customerPhone ? ` · ${sale.customerPhone}` : ''}
+              </p>
               {!sale.voided && (
-                <div className="sale-actions">
-                  <button type="button" className="sms-btn" onClick={() => startSms(sale)}>
-                    SMS
+                <div className="sale-actions-row">
+                  <button
+                    type="button"
+                    className="primary-btn sale-sms-btn"
+                    onClick={() => setSmsSale(sale)}
+                  >
+                    Send SMS receipt
                   </button>
                   {can('sale.void') && (
                     <button
                       type="button"
-                      className="ghost-btn void-btn"
+                      className="secondary-btn"
                       onClick={() => {
                         if (window.confirm('Void this sale and return items to stock?')) {
                           voidSale(sale.id);
@@ -160,56 +147,30 @@ export function Sales() {
                   )}
                 </div>
               )}
-              <p className="sale-items">
-                {sale.items.map((i) => `${i.quantity}× ${i.name}`).join(' · ')}
-                {sale.customerPhone ? ` · ${sale.customerPhone}` : ''}
-              </p>
             </li>
           ))
         )}
       </ul>
 
-      {open && <RecordSaleSheet onClose={() => setOpen(false)} />}
+      {open && (
+        <RecordSaleSheet
+          onClose={() => setOpen(false)}
+          onSavedForSms={(sale) => {
+            setOpen(false);
+            setPendingSmsSale(sale);
+          }}
+        />
+      )}
 
-      {smsSale && (
-        <div className="sheet-backdrop" role="presentation" onClick={() => setSmsSale(null)}>
-          <div
-            className="sheet sheet-compact"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="sms-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <header className="sheet-head">
-              <h2 id="sms-title">Send SMS receipt</h2>
-              <button type="button" className="ghost-btn" onClick={() => setSmsSale(null)}>
-                Close
-              </button>
-            </header>
-            <div className="sheet-body">
-              <p className="sms-hint">
-                Opens Messages with a {settings.storeName} receipt for{' '}
-                <strong>{money(smsSale.total)}</strong>.
-              </p>
-              <label className="stacked-label">
-                Client mobile
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  placeholder="0917 123 4567"
-                  value={phoneDraft}
-                  onChange={(e) => setPhoneDraft(e.target.value)}
-                />
-              </label>
-              {smsError && <p className="form-error">{smsError}</p>}
-            </div>
-            <footer className="sheet-foot">
-              <button type="button" className="primary-btn" onClick={confirmSms}>
-                Open SMS
-              </button>
-            </footer>
-          </div>
-        </div>
+      {activeSms && (
+        <SendReceiptSheet
+          sale={activeSms}
+          title={pendingSmsSale ? 'Sale saved — send SMS' : 'Send SMS receipt'}
+          onClose={() => {
+            setSmsSale(null);
+            setPendingSmsSale(null);
+          }}
+        />
       )}
     </div>
   );
