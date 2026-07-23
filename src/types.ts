@@ -6,6 +6,18 @@ export type Category =
   | 'Paint'
   | 'Lumber';
 
+export type UserRole = 'admin' | 'staff';
+
+export interface StoreUser {
+  id: string;
+  name: string;
+  username: string;
+  role: UserRole;
+  pinHash: string;
+  active: boolean;
+  createdAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -42,6 +54,8 @@ export interface Sale {
   referenceNo?: string;
   voided?: boolean;
   voidedAt?: string;
+  soldById?: string;
+  soldByName?: string;
 }
 
 export interface Customer {
@@ -59,11 +73,18 @@ export interface StoreSettings {
   receiptFooter: string;
 }
 
+export interface CloudConfig {
+  supabaseUrl: string;
+  supabaseAnonKey: string;
+  enabled: boolean;
+}
+
 export interface AppState {
   products: Product[];
   sales: Sale[];
   customers: Customer[];
   settings: StoreSettings;
+  users: StoreUser[];
 }
 
 export interface RecordSaleInput {

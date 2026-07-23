@@ -1,15 +1,21 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
+import { useAuth } from '../auth/AuthContext';
+import { isCloudReady, loadCloudConfig, saveCloudConfig } from '../cloud/supabase';
+import { pullCloud, pushCloud } from '../cloud/sync';
 import { DEFAULT_SETTINGS, SEED_CUSTOMERS } from '../data/defaults';
 import { SEED_PRODUCTS, SEED_SALES } from '../data/seed';
 import { normalizePhMobile, uid } from '../lib/format';
 import type {
+  CloudConfig,
   Customer,
   Product,
   RecordSaleInput,
@@ -17,7 +23,7 @@ import type {
   StoreSettings,
 } from '../types';
 
-const STORAGE_KEY = 'gaba-hardware-store-v4';
+const STORAGE_KEY = 'gaba-hardware-store-v5';
 
 interface PersistedState {
   products: Product[];
@@ -27,6 +33,9 @@ interface PersistedState {
 }
 
 interface StoreContextValue extends PersistedState {
+  cloud: CloudConfig;
+  cloudStatus: 'offline' | 'online' | 'syncing' | 'error';
+  cloudError: string;
   recordSale: (input: RecordSaleInput) => Sale | null;
   voidSale: (saleId: string) => void;
   adjustStock: (productId: string, delta: number) => void;
@@ -40,6 +49,8 @@ interface StoreContextValue extends PersistedState {
   upsertCustomer: (input: { id?: string; name: string; phone: string; note?: string }) => Customer;
   deleteCustomer: (id: string) => void;
   updateSettings: (patch: Partial<StoreSettings>) => void;
+  updateCloudConfig: (config: CloudConfig) => Promise<void>;
+  syncNow: () => Promise<void>;
   resetDemo: () => void;
 }
 
@@ -75,16 +86,111 @@ function loadState(): PersistedState {
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
+  const { user, users, setUsers } = useAuth();
   const initial = loadState();
   const [products, setProducts] = useState<Product[]>(() => initial.products);
   const [sales, setSales] = useState<Sale[]>(() => initial.sales);
   const [customers, setCustomers] = useState<Customer[]>(() => initial.customers);
   const [settings, setSettings] = useState<StoreSettings>(() => initial.settings);
+  const [cloud, setCloud] = useState<CloudConfig>(() => loadCloudConfig());
+  const [cloudStatus, setCloudStatus] = useState<'offline' | 'online' | 'syncing' | 'error'>(
+    () => (isCloudReady(loadCloudConfig()) ? 'online' : 'offline'),
+  );
+  const [cloudError, setCloudError] = useState('');
+  const skipPush = useRef(false);
 
   useEffect(() => {
     const payload: PersistedState = { products, sales, customers, settings };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
   }, [products, sales, customers, settings]);
+
+  const syncNow = useCallback(async () => {
+    if (!isCloudReady(cloud)) {
+      setCloudStatus('offline');
+      return;
+    }
+    setCloudStatus('syncing');
+    setCloudError('');
+    try {
+      await pushCloud(cloud, { products, sales, customers, settings, users });
+      setCloudStatus('online');
+    } catch (err) {
+      setCloudStatus('error');
+      setCloudError(err instanceof Error ? err.message : 'Sync failed');
+    }
+  }, [cloud, products, sales, customers, settings, users]);
+
+  const pullNow = useCallback(async () => {
+    if (!isCloudReady(cloud)) {
+      setCloudStatus('offline');
+      return;
+    }
+    setCloudStatus('syncing');
+    setCloudError('');
+    try {
+      const remote = await pullCloud(cloud);
+      if (remote) {
+        skipPush.current = true;
+        if (remote.products.length) setProducts(remote.products);
+        if (remote.sales.length) setSales(remote.sales);
+        if (remote.customers.length) setCustomers(remote.customers);
+        setSettings(remote.settings);
+        if (remote.users.length) setUsers(remote.users);
+      }
+      setCloudStatus('online');
+    } catch (err) {
+      setCloudStatus('error');
+      setCloudError(err instanceof Error ? err.message : 'Pull failed');
+    }
+  }, [cloud, setUsers]);
+
+  useEffect(() => {
+    void pullNow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cloud.enabled, cloud.supabaseUrl, cloud.supabaseAnonKey]);
+
+  useEffect(() => {
+    if (skipPush.current) {
+      skipPush.current = false;
+      return;
+    }
+    if (!isCloudReady(cloud)) return;
+    const timer = window.setTimeout(() => {
+      void syncNow();
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [products, sales, customers, settings, users, cloud, syncNow]);
+
+  const updateCloudConfig = useCallback(
+    async (config: CloudConfig) => {
+      saveCloudConfig(config);
+      setCloud(config);
+      if (!isCloudReady(config)) {
+        setCloudStatus('offline');
+        return;
+      }
+      setCloudStatus('syncing');
+      try {
+        // Push local first so a new project gets seeded, then pull.
+        await pushCloud(config, { products, sales, customers, settings, users });
+        const remote = await pullCloud(config);
+        if (remote) {
+          skipPush.current = true;
+          if (remote.products.length) setProducts(remote.products);
+          if (remote.sales.length) setSales(remote.sales);
+          if (remote.customers.length) setCustomers(remote.customers);
+          setSettings(remote.settings);
+          if (remote.users.length) setUsers(remote.users);
+        }
+        setCloudStatus('online');
+        setCloudError('');
+      } catch (err) {
+        setCloudStatus('error');
+        setCloudError(err instanceof Error ? err.message : 'Cloud connect failed');
+      }
+    },
+    [products, sales, customers, settings, users, setUsers],
+  );
 
   const value = useMemo<StoreContextValue>(
     () => ({
@@ -92,6 +198,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       sales,
       customers,
       settings,
+      cloud,
+      cloudStatus,
+      cloudError,
       recordSale: (input) => {
         if (!input.items.length) return null;
         const total = input.items.reduce((acc, i) => acc + i.quantity * i.unitPrice, 0);
@@ -107,6 +216,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           customerPhone: phone || undefined,
           note: input.note?.trim() || undefined,
           referenceNo: input.referenceNo?.trim() || undefined,
+          soldById: user?.id,
+          soldByName: user?.name,
         };
         setSales((prev) => [sale, ...prev]);
         setProducts((prev) =>
@@ -123,9 +234,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             );
             if (existing) {
               return prev.map((c) =>
-                c.id === existing.id
-                  ? { ...c, name: name || c.name, phone: phone }
-                  : c,
+                c.id === existing.id ? { ...c, name: name || c.name, phone } : c,
               );
             }
             return [
@@ -224,6 +333,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       updateSettings: (patch) => {
         setSettings((prev) => ({ ...prev, ...patch }));
       },
+      updateCloudConfig,
+      syncNow,
       resetDemo: () => {
         const seeded = seedState();
         setProducts(seeded.products);
@@ -232,7 +343,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSettings(seeded.settings);
       },
     }),
-    [products, sales, customers, settings],
+    [
+      products,
+      sales,
+      customers,
+      settings,
+      cloud,
+      cloudStatus,
+      cloudError,
+      user,
+      updateCloudConfig,
+      syncNow,
+    ],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

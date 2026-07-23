@@ -1,27 +1,32 @@
 # Gaba Hardware
 
-Mobile-first hardware store ops app for monitoring **sales**, managing **inventory**, and checking a live **dashboard**.
+Mobile store ops app for the Philippines — **admin (boss)** and **staff** logins, sales, inventory, SMS receipts in **₱ PHP**, optional **online sync**, and **Android** packaging.
+
+## Default logins
+
+| Role | Username | PIN |
+|------|----------|-----|
+| Admin / Boss | `admin` | `0000` |
+| Staff | `staff` | `1234` |
 
 ## Features
 
-- **Dashboard** — today’s till, profit estimate, chart, low-stock alerts, top movers
-- **Sales** — search, favorites quick-pick, Cash/GCash/Card/Bank transfer, void sale, GCash ref
-- **SMS receipts** — send peso receipts to PH mobiles; auto-save customers
-- **Inventory** — photos, favorites, search & category filters, restock
-- **Customers** — saved clients for quick SMS
-- **Reports** — sales/profit by period, payment mix, share report & reorder list
-- **Settings** — store name/address for receipts, reset demo data
+- **Roles** — Admin manages settings/staff/void; Staff sells and adjusts stock
+- **Dashboard** — sales, profit, chart, low stock, top movers
+- **Sales** — favorites, GCash refs, SMS receipts, void (admin), cashier name on ticket
+- **Inventory** — photos, favorites, restock
+- **Customers / Reports / Staff / Settings**
+- **Online sync** — Supabase (see `ONLINE.md`)
+- **Android app** — Capacitor (see `ANDROID.md`)
 
-Currency is **PHP (₱)**. Data persists in `localStorage` with seeded demo hardware SKUs.
-
-## Run
+## Run (web)
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL (phone-width frame on desktop; full-bleed on mobile).
+## Build
 
 ```bash
 npm run build
@@ -30,4 +35,4 @@ npm run preview
 
 ## Stack
 
-Vite · React 19 · TypeScript · React Router · Recharts · date-fns
+Vite · React 19 · TypeScript · Supabase · Capacitor · Recharts

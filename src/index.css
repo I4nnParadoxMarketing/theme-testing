@@ -1089,3 +1089,103 @@ a {
     border: none;
   }
 }
+
+.login-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: #ffffff;
+}
+
+.login-card {
+  width: min(100%, 400px);
+  border: 3px solid #000000;
+  padding: 22px 18px;
+  background: #ffffff;
+}
+
+.login-hints {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 2px solid #000000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.login-hints p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #222222;
+}
+
+.login-hints code {
+  background: #ff6a00;
+  color: #000000;
+  padding: 1px 6px;
+  font-weight: 700;
+}
+
+.session-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 3px solid var(--brand-red);
+  border-bottom: 1px solid var(--line);
+}
+
+.session-card strong {
+  display: block;
+}
+
+.session-card span {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.cloud-pill {
+  font-style: normal;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 6px 8px;
+  border: 2px solid #000000;
+  background: #ffffff;
+}
+
+.cloud-pill.status-online {
+  background: #ff6a00;
+}
+
+.cloud-pill.status-syncing {
+  background: #ffffff;
+}
+
+.cloud-pill.status-error {
+  background: #e10600;
+  color: #ffffff;
+}
+
+.check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 650;
+  color: #000000;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.ok-line {
+  margin: 0;
+  color: #000000;
+  font-size: 0.88rem;
+  font-weight: 700;
+}

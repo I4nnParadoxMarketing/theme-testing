@@ -21,10 +21,12 @@ import {
   topSelling,
   weekSeries,
 } from '../lib/stats';
+import { useAuth } from '../auth/AuthContext';
 import { useStore } from '../hooks/useStore';
 
 export function Dashboard() {
-  const { products, sales, settings } = useStore();
+  const { products, sales, settings, cloudStatus } = useStore();
+  const { user, isAdmin } = useAuth();
 
   const stats = useMemo(() => {
     const today = todaySales(sales);
@@ -57,7 +59,10 @@ export function Dashboard() {
           </span>
           <h1 className="brand-name">{settings.storeName}</h1>
         </div>
-        <p className="brand-tagline">Floor ops for tools, stock, and today&apos;s till.</p>
+        <p className="brand-tagline">
+          {user?.name} · {isAdmin ? 'Admin' : 'Staff'}
+          {cloudStatus === 'online' ? ' · Online' : cloudStatus === 'syncing' ? ' · Syncing' : ' · Local'}
+        </p>
       </header>
 
       <section className="kpi-strip" aria-label="Today overview">

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { IconPlus, IconSearch, IconStar, IconStarFilled } from '../components/Icons';
 import { ProductThumb } from '../components/ProductThumb';
 import { money } from '../lib/format';
@@ -10,6 +11,7 @@ import { ProductSheet } from './ProductSheet';
 
 export function Inventory() {
   const { products, adjustStock, toggleFavorite } = useStore();
+  const { can } = useAuth();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<Category | 'All' | 'Favorites'>('All');
   const [editing, setEditing] = useState<Product | null>(null);
@@ -40,10 +42,12 @@ export function Inventory() {
           <p className="eyebrow">Stockroom</p>
           <h1>Inventory</h1>
         </div>
-        <button type="button" className="fab-btn" onClick={() => setAdding(true)} aria-label="Add product">
-          <IconPlus />
-          <span>Add</span>
-        </button>
+        {can('inventory.edit') && (
+          <button type="button" className="fab-btn" onClick={() => setAdding(true)} aria-label="Add product">
+            <IconPlus />
+            <span>Add</span>
+          </button>
+        )}
       </header>
 
       <label className="search-field">
@@ -76,7 +80,13 @@ export function Inventory() {
           const status = stockStatus(p);
           return (
             <li key={p.id} className={`inv-row rise-${Math.min(index + 1, 5)}`}>
-              <button type="button" className="inv-main" onClick={() => setEditing(p)}>
+              <button
+                type="button"
+                className="inv-main"
+                onClick={() => {
+                  if (can('inventory.edit')) setEditing(p);
+                }}
+              >
                 <ProductThumb name={p.name} image={p.image} category={p.category} size="md" />
                 <div className="inv-copy">
                   <strong>{p.name}</strong>
@@ -99,12 +109,16 @@ export function Inventory() {
                   >
                     {p.favorite ? <IconStarFilled size={16} /> : <IconStar size={16} />}
                   </button>
-                  <button type="button" aria-label={`Decrease ${p.name}`} onClick={() => adjustStock(p.id, -1)}>
-                    −
-                  </button>
-                  <button type="button" aria-label={`Increase ${p.name}`} onClick={() => adjustStock(p.id, 1)}>
-                    +
-                  </button>
+                  {can('inventory.adjust') && (
+                    <>
+                      <button type="button" aria-label={`Decrease ${p.name}`} onClick={() => adjustStock(p.id, -1)}>
+                        −
+                      </button>
+                      <button type="button" aria-label={`Increase ${p.name}`} onClick={() => adjustStock(p.id, 1)}>
+                        +
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </li>

@@ -1,5 +1,6 @@
 import { format, isSameDay, subDays } from 'date-fns';
 import { useMemo, useState } from 'react';
+import { useAuth } from '../auth/AuthContext';
 import { IconPlus, IconSearch } from '../components/Icons';
 import { isValidPhMobile, money } from '../lib/format';
 import { openReceiptSms } from '../lib/receiptSms';
@@ -24,6 +25,7 @@ function filterSales(sales: Sale[], filter: Filter): Sale[] {
 
 export function Sales() {
   const { sales, settings, updateSaleCustomer, voidSale } = useStore();
+  const { can } = useAuth();
   const [filter, setFilter] = useState<Filter>('today');
   const [query, setQuery] = useState('');
   const [open, setOpen] = useState(false);
@@ -133,6 +135,7 @@ export function Sales() {
                 </strong>
                 <span>
                   {format(new Date(sale.createdAt), 'MMM d · h:mm a')} · {sale.paymentMethod}
+                  {sale.soldByName ? ` · ${sale.soldByName}` : ''}
                   {sale.customerName ? ` · ${sale.customerName}` : ''}
                   {sale.referenceNo ? ` · Ref ${sale.referenceNo}` : ''}
                 </span>
@@ -142,17 +145,19 @@ export function Sales() {
                   <button type="button" className="sms-btn" onClick={() => startSms(sale)}>
                     SMS
                   </button>
-                  <button
-                    type="button"
-                    className="ghost-btn void-btn"
-                    onClick={() => {
-                      if (window.confirm('Void this sale and return items to stock?')) {
-                        voidSale(sale.id);
-                      }
-                    }}
-                  >
-                    Void
-                  </button>
+                  {can('sale.void') && (
+                    <button
+                      type="button"
+                      className="ghost-btn void-btn"
+                      onClick={() => {
+                        if (window.confirm('Void this sale and return items to stock?')) {
+                          voidSale(sale.id);
+                        }
+                      }}
+                    >
+                      Void
+                    </button>
+                  )}
                 </div>
               )}
               <p className="sale-items">
