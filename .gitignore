@@ -17,3 +17,7 @@ bin/
 gen/
 out/
 .kotlin/
+
+# Keep packaged debug APK for phone sideload
+!distribution/
+!distribution/*.apk
