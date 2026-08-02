@@ -1,0 +1,1 @@
+# PigFeed Guide ProGuard rules
