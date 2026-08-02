@@ -117,7 +117,7 @@ fun SectionHeader(title: String, subtitle: String? = null) {
             color = ForestDeep
         )
         if (subtitle != null) {
-            Spacer(Modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             Text(
                 text = subtitle,
                 style = MaterialTheme.typography.bodyMedium,

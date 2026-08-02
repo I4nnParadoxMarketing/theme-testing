@@ -2,11 +2,11 @@ package com.pigfeed.guide.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -51,9 +51,9 @@ fun PigFeedNavHost(repository: PigFeedRepository) {
     val navController = rememberNavController()
     val tabs = listOf(
         TabItem(Routes.Home.route, "Home", Icons.Filled.Home),
-        TabItem(Routes.Guides.route, "Guides", Icons.Filled.MenuBook),
+        TabItem(Routes.Guides.route, "Guides", Icons.AutoMirrored.Filled.MenuBook),
         TabItem(Routes.Herds.route, "Herds", Icons.Filled.Groups),
-        TabItem(Routes.Logs.route, "Logs", Icons.Filled.ReceiptLong),
+        TabItem(Routes.Logs.route, "Logs", Icons.AutoMirrored.Filled.ReceiptLong),
         TabItem(Routes.Calculator.route, "Calc", Icons.Filled.Calculate)
     )
     val backStack by navController.currentBackStackEntryAsState()
